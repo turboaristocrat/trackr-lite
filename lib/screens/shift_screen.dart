@@ -308,17 +308,32 @@ class _ShiftScreenState extends State<ShiftScreen> {
                     ),
                   ),
                   const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.preview_rounded, size: 20, color: AppTheme.secondary),
-                    visualDensity: VisualDensity.compact,
-                    tooltip: 'Preview Report',
-                    onPressed: _previewReport,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.settings_outlined, size: 20, color: AppTheme.textSecondary),
-                    visualDensity: VisualDensity.compact,
-                    tooltip: 'Edit Setup',
-                    onPressed: _editSetup,
+                  InkWell(
+                    onTap: _previewReport,
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppTheme.borderColor),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.description_outlined, size: 17, color: AppTheme.primary),
+                          SizedBox(width: 5),
+                          Text(
+                            'Report',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
