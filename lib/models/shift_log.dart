@@ -1,4 +1,5 @@
 import 'block_entry.dart';
+import 'reminder_item.dart';
 
 class ShiftLog {
   final String date; // YYYY-MM-DD
@@ -10,6 +11,7 @@ class ShiftLog {
   final String stabledStation;
   final String stabledTime;
   final List<BlockEntry> blocks;
+  final List<ReminderItem> reminders;
 
   const ShiftLog({
     required this.date,
@@ -21,6 +23,7 @@ class ShiftLog {
     this.stabledStation = '',
     this.stabledTime = '',
     required this.blocks,
+    this.reminders = const [],
   });
 
   // Backward compatibility getters
@@ -64,6 +67,7 @@ class ShiftLog {
     'stabledStation': stabledStation,
     'stabledTime': stabledTime,
     'blocks': blocks.map((b) => b.toJson()).toList(),
+    'reminders': reminders.map((r) => r.toJson()).toList(),
   };
 
   factory ShiftLog.fromJson(Map<String, dynamic> json) {
@@ -73,6 +77,12 @@ class ShiftLog {
       final n = json['machineNo'] as String? ?? '005H';
       mName = '$t$n'.trim();
     }
+
+    final remindersList = (json['reminders'] as List<dynamic>?)
+            ?.map((e) => ReminderItem.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        [];
+
     return ShiftLog(
       date: json['date'] as String? ?? '',
       machineName: mName.isNotEmpty ? mName : 'UTV005H',
@@ -86,6 +96,7 @@ class ShiftLog {
               ?.map((e) => BlockEntry.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
+      reminders: remindersList,
     );
   }
 
@@ -99,6 +110,7 @@ class ShiftLog {
     String? stabledStation,
     String? stabledTime,
     List<BlockEntry>? blocks,
+    List<ReminderItem>? reminders,
   }) {
     return ShiftLog(
       date: date ?? this.date,
@@ -110,6 +122,7 @@ class ShiftLog {
       stabledStation: stabledStation ?? this.stabledStation,
       stabledTime: stabledTime ?? this.stabledTime,
       blocks: blocks ?? this.blocks,
+      reminders: reminders ?? this.reminders,
     );
   }
 }

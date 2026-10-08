@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/shift_log.dart';
+import '../services/station_service.dart';
 import '../theme/app_theme.dart';
+import 'station_autocomplete_field.dart';
 
 class EditShiftDialog extends StatefulWidget {
   final ShiftLog currentShift;
@@ -29,6 +31,9 @@ class _EditShiftDialogState extends State<EditShiftDialog> {
     _machineNameCtrl = TextEditingController(text: widget.currentShift.machineName);
     _divisionCtrl = TextEditingController(text: widget.currentShift.division);
     _sectionCtrl = TextEditingController(text: widget.currentShift.section);
+    _sectionCtrl.addListener(() {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
@@ -54,6 +59,10 @@ class _EditShiftDialogState extends State<EditShiftDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final secCode = _sectionCtrl.text.trim().toUpperCase();
+    final matchedStationName = secCode.isNotEmpty ? StationService.getStationName(secCode) : '';
+    final hasStationDetails = matchedStationName.isNotEmpty && matchedStationName.toUpperCase() != secCode;
+
     return AlertDialog(
       backgroundColor: AppTheme.cardBg,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -69,7 +78,7 @@ class _EditShiftDialogState extends State<EditShiftDialog> {
       ),
       content: SingleChildScrollView(
         child: SizedBox(
-          width: 360,
+          width: 380,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -84,14 +93,17 @@ class _EditShiftDialogState extends State<EditShiftDialog> {
                 controller: _machineNameCtrl,
                 decoration: const InputDecoration(
                   labelText: 'Machine Name',
-                  hintText: 'e.g. UTV005H or CSM 952',
+                  hintText: 'e.g. UTV500 or CSM 952',
                   prefixIcon: Icon(Icons.train_rounded, size: 20),
                 ),
               ),
               const SizedBox(height: 12),
+
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
+                    flex: 2,
                     child: TextField(
                       controller: _divisionCtrl,
                       textCapitalization: TextCapitalization.characters,
@@ -104,18 +116,51 @@ class _EditShiftDialogState extends State<EditShiftDialog> {
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: TextField(
-                      controller: _sectionCtrl,
-                      textCapitalization: TextCapitalization.characters,
-                      decoration: const InputDecoration(
-                        labelText: 'Section Code',
-                        hintText: 'e.g. KTYM',
-                        prefixIcon: Icon(Icons.signpost_rounded, size: 18),
-                      ),
+                    flex: 3,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        StationAutocompleteField(
+                          controller: _sectionCtrl,
+                          label: 'Section Code',
+                          hintText: 'e.g. ERS or KTYM',
+                          prefixIcon: const Icon(Icons.signpost_rounded, size: 18),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
+
+              // Station details preview below section input
+              if (hasStationDetails) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppTheme.secondary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppTheme.secondary.withValues(alpha: 0.25)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.location_on_rounded, size: 15, color: AppTheme.secondary),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          '$secCode: $matchedStationName',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.secondary,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'screens/history_screen.dart';
 import 'screens/shift_screen.dart';
 import 'theme/app_theme.dart';
+import 'widgets/trackr_logo.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,44 +41,7 @@ class _MainScaffoldState extends State<MainScaffold> {
       backgroundColor: AppTheme.background,
       appBar: _currentIndex == 0
           ? AppBar(
-              title: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primary.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.flash_on_rounded, color: AppTheme.primary, size: 20),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'TRACKR',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.8,
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppTheme.secondaryContainer,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Text(
-                      'LITE',
-                      style: TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF281800),
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              title: const TrackrLogo(iconSize: 32, fontSize: 18),
               actions: [
                 Container(
                   margin: const EdgeInsets.only(right: 14),
