@@ -2,9 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trackr_lite/models/block_entry.dart';
 import 'package:trackr_lite/models/shift_log.dart';
+import 'package:trackr_lite/services/report_service.dart';
 import 'package:trackr_lite/services/station_service.dart';
 import 'package:trackr_lite/services/storage_service.dart';
-import 'package:trackr_lite/services/whatsapp_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -21,58 +21,87 @@ void main() {
     });
   });
 
-  group('WhatsAppService', () {
-    test('Formats shift report accurately for blocks and transit', () {
+  group('ReportService', () {
+    test('Matches official Southern Railway UTV format exactly', () {
       final log = ShiftLog(
-        date: '2026-10-08',
-        machineType: 'CSM',
-        machineNo: '952',
+        date: '2026-09-12',
+        machineType: 'UTV',
+        machineNo: '005H',
         division: 'TVC',
         section: 'KTYM',
-        stabledStation: 'CGY',
+        readyStation: 'CGY',
+        readyTime: '09:25',
+        stabledStation: 'KTYM',
         blocks: [
           const BlockEntry(
             id: 'b1',
-            startTime: '01:15',
-            endTime: '03:45',
-            stationFrom: 'HAD',
-            stationTo: 'CGY',
-            line: 'DN',
-            output: 1240,
-            outputUnit: 'Sleepers',
-            remarks: 'Tamping done',
+            startTime: '10:35',
+            endTime: '11:20',
+            stationFrom: 'CGY',
+            stationTo: 'CGV',
+            line: 'UP',
+            activity: 'Sleepers unloaded',
+            output: 16,
+            outputUnit: 'Nos',
           ),
           const BlockEntry(
             id: 'b2',
-            startTime: '04:00',
-            endTime: '05:10',
+            startTime: '12:05',
+            endTime: '13:30',
             stationFrom: 'CGY',
             stationTo: 'TRVL',
-            line: 'Transit',
-            output: 18.5,
-            outputUnit: 'Km',
+            line: 'DN',
+            activity: 'Sleepers loaded',
+            output: 64,
+            outputUnit: 'Nos',
+          ),
+          const BlockEntry(
+            id: 'b3',
+            startTime: '14:55',
+            endTime: '15:50',
+            stationFrom: 'CGY',
+            stationTo: 'CGV',
+            line: 'UP',
+            activity: 'Sleepers unloaded',
+            output: 24,
+            outputUnit: 'Nos',
+          ),
+          const BlockEntry(
+            id: 'b4',
+            startTime: '16:38',
+            endTime: '16:53',
+            stationFrom: 'CGV',
+            stationTo: 'KTYM',
             isTransit: true,
           ),
         ],
       );
 
-      final report = WhatsAppService.formatReport(log);
+      final report = ReportService.formatReport(log);
 
-      expect(report, contains('TRACKR LITE SHIFT REPORT'));
-      expect(report, contains('CSM 952'));
-      expect(report, contains('TVC / KTYM'));
-      expect(report, contains('1240 Sleepers'));
-      expect(report, contains('18.5 Km'));
-      expect(report, contains('*Total Blocks:* 1'));
-      expect(report, contains('*Total Block Output:* 1240'));
-      expect(report, contains('*Total Transit Run:* 18.5 Km'));
+      expect(report, contains('Progress of UTV005H on 12.09.2026'));
+      expect(report, contains('Division: TVC'));
+      expect(report, contains('Section: KTYM'));
+      expect(report, contains('Machine ready at CGY – 09:25 hrs.'));
+      expect(report, contains('Block – 1'));
+      expect(report, contains('BT: 10:35 – 11:20 hrs'));
+      expect(report, contains('CGY – CGV (UP)'));
+      expect(report, contains('Sleepers unloaded: 16 Nos'));
+      expect(report, contains('CGY – TRVL (DN)'));
+      expect(report, contains('Sleepers loaded: 64 Nos'));
+      expect(report, contains('CGV – KTYM : 16:38 – 16:53 hrs'));
+      expect(report, contains('Total:'));
+      expect(report, contains('Sleepers loaded: 64 Nos'));
+      expect(report, contains('Sleepers unloaded: 40 Nos'));
+      expect(report, contains('= 104 nos'));
+      expect(report, contains('Machine stabled at KTYM.'));
     });
   });
 
   group('StorageService', () {
     test('Saves and retrieves active shift and history', () async {
       final initial = await StorageService.getActiveShift();
-      expect(initial.machineType, 'CSM');
+      expect(initial.machineType, 'UTV');
 
       final updated = initial.copyWith(
         machineType: 'DUOMAT',
@@ -84,6 +113,7 @@ void main() {
             endTime: '04:00',
             stationFrom: 'TCR',
             stationTo: 'OLR',
+            activity: 'Tamping done',
             output: 1500,
           ),
         ],

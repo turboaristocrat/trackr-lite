@@ -5,8 +5,9 @@ class BlockEntry {
   final String stationFrom;
   final String stationTo;
   final String line; // 'UP', 'DN', 'SL', 'Yard'
+  final String activity; // 'Sleepers unloaded', 'Sleepers loaded', 'Tamping done', etc.
   final double output;
-  final String outputUnit; // 'Sleepers', 'Km', 'Turnouts'
+  final String outputUnit; // 'Nos', 'Sleepers', 'Km', 'Turnouts'
   final String remarks;
   final bool isTransit;
 
@@ -17,8 +18,9 @@ class BlockEntry {
     required this.stationFrom,
     required this.stationTo,
     this.line = 'DN',
+    this.activity = 'Sleepers unloaded',
     this.output = 0.0,
-    this.outputUnit = 'Sleepers',
+    this.outputUnit = 'Nos',
     this.remarks = '',
     this.isTransit = false,
   });
@@ -30,6 +32,7 @@ class BlockEntry {
     'stationFrom': stationFrom,
     'stationTo': stationTo,
     'line': line,
+    'activity': activity,
     'output': output,
     'outputUnit': outputUnit,
     'remarks': remarks,
@@ -43,8 +46,9 @@ class BlockEntry {
     stationFrom: json['stationFrom'] as String? ?? '',
     stationTo: json['stationTo'] as String? ?? '',
     line: json['line'] as String? ?? 'DN',
+    activity: json['activity'] as String? ?? 'Sleepers unloaded',
     output: (json['output'] as num?)?.toDouble() ?? 0.0,
-    outputUnit: json['outputUnit'] as String? ?? 'Sleepers',
+    outputUnit: json['outputUnit'] as String? ?? 'Nos',
     remarks: json['remarks'] as String? ?? '',
     isTransit: json['isTransit'] as bool? ?? false,
   );
@@ -56,6 +60,7 @@ class BlockEntry {
     String? stationFrom,
     String? stationTo,
     String? line,
+    String? activity,
     double? output,
     String? outputUnit,
     String? remarks,
@@ -68,6 +73,7 @@ class BlockEntry {
       stationFrom: stationFrom ?? this.stationFrom,
       stationTo: stationTo ?? this.stationTo,
       line: line ?? this.line,
+      activity: activity ?? this.activity,
       output: output ?? this.output,
       outputUnit: outputUnit ?? this.outputUnit,
       remarks: remarks ?? this.remarks,

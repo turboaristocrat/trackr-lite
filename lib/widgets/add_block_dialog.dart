@@ -42,11 +42,32 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
   late TextEditingController _endCtrl;
   late TextEditingController _fromCtrl;
   late TextEditingController _toCtrl;
+  late TextEditingController _activityCtrl;
   late TextEditingController _outputCtrl;
   late TextEditingController _remarksCtrl;
 
-  String _line = 'DN';
-  String _unit = 'Sleepers';
+  String _line = 'UP';
+  String _unit = 'Nos';
+  String _selectedAction = 'unloaded';
+  String _selectedItem = 'Sleepers';
+
+  final List<String> _railItems = [
+    'Sleepers',
+    'P&C Sleepers',
+    'Channel Sleepers',
+    'SEJ Sleepers',
+    'Rails',
+    'Crossing',
+    'OHE Mast',
+  ];
+
+  final List<String> _railActions = [
+    'unloaded',
+    'loaded',
+    'packed',
+    'erected',
+    'renewed',
+  ];
 
   final List<String> _quickRemarks = [
     'Tamping done',
@@ -69,12 +90,15 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
     _endCtrl = TextEditingController(text: e?.endTime ?? '');
     _fromCtrl = TextEditingController(text: e?.stationFrom ?? '');
     _toCtrl = TextEditingController(text: e?.stationTo ?? '');
+    _activityCtrl = TextEditingController(text: e?.activity ?? 'Sleepers unloaded');
     _outputCtrl = TextEditingController(
-      text: e != null && e.output > 0 ? (e.output.truncateToDouble() == e.output ? e.output.toInt().toString() : e.output.toString()) : '',
+      text: e != null && e.output > 0
+          ? (e.output.truncateToDouble() == e.output ? e.output.toInt().toString() : e.output.toString())
+          : '',
     );
     _remarksCtrl = TextEditingController(text: e?.remarks ?? '');
-    _line = e?.line ?? 'DN';
-    _unit = e?.outputUnit ?? (_isTransit ? 'Km' : 'Sleepers');
+    _line = e?.line ?? 'UP';
+    _unit = e?.outputUnit ?? (_isTransit ? 'Km' : 'Nos');
   }
 
   @override
@@ -83,9 +107,16 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
     _endCtrl.dispose();
     _fromCtrl.dispose();
     _toCtrl.dispose();
+    _activityCtrl.dispose();
     _outputCtrl.dispose();
     _remarksCtrl.dispose();
     super.dispose();
+  }
+
+  void _updateActivityText() {
+    setState(() {
+      _activityCtrl.text = '$_selectedItem $_selectedAction';
+    });
   }
 
   Future<void> _pickTime(TextEditingController ctrl) async {
@@ -129,6 +160,7 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
       stationFrom: from,
       stationTo: to,
       line: _isTransit ? 'Transit' : _line,
+      activity: _isTransit ? 'Transit Run' : _activityCtrl.text.trim(),
       output: outputVal,
       outputUnit: _isTransit ? 'Km' : _unit,
       remarks: _remarksCtrl.text.trim(),
@@ -171,21 +203,20 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
                 Text(
                   widget.initialEntry != null
                       ? 'Edit Entry'
-                      : (_isTransit ? 'Log Transit Run' : 'Log Track Block'),
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      : (_isTransit ? 'Log Movement / Transit' : 'Log Track Block'),
+                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
-                // Toggle Block vs Transit
                 SegmentedButton<bool>(
                   segments: const [
-                    ButtonSegment(value: false, label: Text('Block', style: TextStyle(fontSize: 12))),
-                    ButtonSegment(value: true, label: Text('Transit', style: TextStyle(fontSize: 12))),
+                    ButtonSegment(value: false, label: Text('Block', style: TextStyle(fontSize: 11.5))),
+                    ButtonSegment(value: true, label: Text('Transit', style: TextStyle(fontSize: 11.5))),
                   ],
                   selected: {_isTransit},
                   onSelectionChanged: (set) {
                     setState(() {
                       _isTransit = set.first;
-                      _unit = _isTransit ? 'Km' : 'Sleepers';
+                      _unit = _isTransit ? 'Km' : 'Nos';
                     });
                   },
                   style: const ButtonStyle(
@@ -195,9 +226,9 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
-            // Time Row
+            // Time Row (BT: Start - End hrs)
             Row(
               children: [
                 Expanded(
@@ -207,9 +238,9 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
                     child: IgnorePointer(
                       child: TextField(
                         controller: _startCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Start Time (24h)',
-                          prefixIcon: Icon(Icons.access_time_rounded, size: 18),
+                        decoration: InputDecoration(
+                          labelText: _isTransit ? 'Start Time' : 'BT Start Time',
+                          prefixIcon: const Icon(Icons.access_time_rounded, size: 18),
                         ),
                       ),
                     ),
@@ -223,9 +254,9 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
                     child: IgnorePointer(
                       child: TextField(
                         controller: _endCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'End Time (24h)',
-                          prefixIcon: Icon(Icons.access_time_filled_rounded, size: 18),
+                        decoration: InputDecoration(
+                          labelText: _isTransit ? 'End Time' : 'BT End Time',
+                          prefixIcon: const Icon(Icons.access_time_filled_rounded, size: 18),
                         ),
                       ),
                     ),
@@ -235,7 +266,7 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
             ),
             const SizedBox(height: 12),
 
-            // Station From and To with autocomplete
+            // Station From and To
             Row(
               children: [
                 Expanded(
@@ -243,8 +274,7 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
                     initialValue: TextEditingValue(text: _fromCtrl.text),
                     optionsBuilder: (textEditingValue) {
                       if (textEditingValue.text.isEmpty) return const [];
-                      return StationService.search(textEditingValue.text)
-                          .map((s) => s.code);
+                      return StationService.search(textEditingValue.text).map((s) => s.code);
                     },
                     onSelected: (selection) => _fromCtrl.text = selection,
                     fieldViewBuilder: (ctx, ctrl, focus, onSub) {
@@ -255,7 +285,7 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
                         textCapitalization: TextCapitalization.characters,
                         decoration: const InputDecoration(
                           labelText: 'From Station',
-                          hintText: 'e.g. HAD',
+                          hintText: 'e.g. CGY',
                         ),
                       );
                     },
@@ -270,8 +300,7 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
                     initialValue: TextEditingValue(text: _toCtrl.text),
                     optionsBuilder: (textEditingValue) {
                       if (textEditingValue.text.isEmpty) return const [];
-                      return StationService.search(textEditingValue.text)
-                          .map((s) => s.code);
+                      return StationService.search(textEditingValue.text).map((s) => s.code);
                     },
                     onSelected: (selection) => _toCtrl.text = selection,
                     fieldViewBuilder: (ctx, ctrl, focus, onSub) {
@@ -282,7 +311,7 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
                         textCapitalization: TextCapitalization.characters,
                         decoration: const InputDecoration(
                           labelText: 'To Station',
-                          hintText: 'e.g. CGY',
+                          hintText: 'e.g. CGV',
                         ),
                       );
                     },
@@ -292,11 +321,11 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
             ),
             const SizedBox(height: 12),
 
-            // Line selector (for block only)
+            // Track Line (Block only)
             if (!_isTransit) ...[
               Row(
                 children: [
-                  const Text('Track Line: ', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                  const Text('Line: ', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
                   const SizedBox(width: 8),
                   Wrap(
                     spacing: 6,
@@ -312,10 +341,78 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
                   ),
                 ],
               ),
+              const SizedBox(height: 14),
+
+              // Item Chips (Rails, Sleepers, P&C Sleepers, etc.)
+              const Text('Work Item:', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: _railItems.map((item) {
+                    final sel = _selectedItem == item;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: FilterChip(
+                        label: Text(item, style: TextStyle(fontSize: 12, fontWeight: sel ? FontWeight.bold : FontWeight.normal)),
+                        selected: sel,
+                        selectedColor: AppTheme.secondary.withValues(alpha: 0.25),
+                        onSelected: (val) {
+                          if (val) {
+                            setState(() {
+                              _selectedItem = item;
+                              _updateActivityText();
+                            });
+                          }
+                        },
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              // Action Chips (unloaded, loaded, packed, etc.)
+              Row(
+                children: [
+                  const Text('Action: ', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                  const SizedBox(width: 6),
+                  Wrap(
+                    spacing: 6,
+                    children: _railActions.map((action) {
+                      final sel = _selectedAction == action;
+                      return ChoiceChip(
+                        label: Text(action, style: TextStyle(fontSize: 11.5, fontWeight: sel ? FontWeight.bold : FontWeight.normal)),
+                        selected: sel,
+                        selectedColor: AppTheme.amberAccent.withValues(alpha: 0.25),
+                        onSelected: (val) {
+                          if (val) {
+                            setState(() {
+                              _selectedAction = action;
+                              _updateActivityText();
+                            });
+                          }
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // Activity Field (editable text)
+              TextField(
+                controller: _activityCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Report Activity Label',
+                  hintText: 'e.g. Sleepers unloaded',
+                  prefixIcon: Icon(Icons.label_outline_rounded, size: 18),
+                ),
+              ),
               const SizedBox(height: 12),
             ],
 
-            // Output row
+            // Quantity / Output
             Row(
               children: [
                 Expanded(
@@ -324,8 +421,8 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
                     controller: _outputCtrl,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(
-                      labelText: _isTransit ? 'Distance Run' : 'Block Output',
-                      hintText: _isTransit ? 'e.g. 15.5' : 'e.g. 1250',
+                      labelText: _isTransit ? 'Transit Distance' : 'Quantity / Output',
+                      hintText: _isTransit ? 'e.g. 18.5' : 'e.g. 16',
                       prefixIcon: Icon(_isTransit ? Icons.speed_rounded : Icons.numbers_rounded, size: 18),
                     ),
                   ),
@@ -338,10 +435,12 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
                       initialValue: _unit,
                       decoration: const InputDecoration(labelText: 'Unit'),
                       items: const [
+                        DropdownMenuItem(value: 'Nos', child: Text('Nos')),
                         DropdownMenuItem(value: 'Sleepers', child: Text('Sleepers')),
                         DropdownMenuItem(value: 'Km', child: Text('Km')),
-                        DropdownMenuItem(value: 'Turnouts', child: Text('Turnouts')),
+                        DropdownMenuItem(value: 'Sets', child: Text('Sets')),
                         DropdownMenuItem(value: 'Meters', child: Text('Meters')),
+                        DropdownMenuItem(value: 'Hoppers', child: Text('Hoppers')),
                       ],
                       onChanged: (val) {
                         if (val != null) setState(() => _unit = val);
@@ -350,19 +449,19 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
                   )
                 else
                   const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12),
+                    padding: EdgeInsets.symmetric(horizontal: 14),
                     child: Text('Km', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   ),
               ],
             ),
             const SizedBox(height: 12),
 
-            // Remarks
+            // Optional Remarks
             TextField(
               controller: _remarksCtrl,
               decoration: const InputDecoration(
-                labelText: 'Remarks / Work details (optional)',
-                hintText: 'e.g. Tamping from Km 84/10 to 86/00',
+                labelText: 'Remarks / Extra info (optional)',
+                hintText: 'e.g. Km 84/10 to 86/00',
               ),
             ),
             const SizedBox(height: 8),
@@ -397,10 +496,11 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: _isTransit ? AppTheme.amberAccent : AppTheme.primary,
                 foregroundColor: _isTransit ? Colors.black : Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
               ),
               icon: const Icon(Icons.check_circle_rounded, size: 20),
               label: Text(
-                widget.initialEntry != null ? 'Update Entry' : 'Add to Shift',
+                widget.initialEntry != null ? 'Update Entry' : 'Add to Shift Log',
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
             ),

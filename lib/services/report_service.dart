@@ -1,0 +1,141 @@
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../models/shift_log.dart';
+
+class ReportService {
+  static String formatReport(ShiftLog log) {
+    String formattedDate;
+    try {
+      final parsed = DateTime.parse(log.date);
+      formattedDate = DateFormat('dd.MM.yyyy').format(parsed);
+    } catch (_) {
+      formattedDate = log.date;
+    }
+
+    final machineTitle = '${log.machineType}${log.machineNo}'.replaceAll(' ', '');
+
+    final buffer = StringBuffer();
+    buffer.writeln('Progress of $machineTitle on $formattedDate');
+    buffer.writeln('Division: ${log.division}');
+    buffer.writeln('Section: ${log.section}');
+    buffer.writeln();
+
+    if (log.readyStation.isNotEmpty && log.readyTime.isNotEmpty) {
+      buffer.writeln('Machine ready at ${log.readyStation} – ${log.readyTime} hrs.');
+      buffer.writeln();
+    }
+
+    int blockIndex = 1;
+    for (final b in log.blocks) {
+      if (b.isTransit) {
+        buffer.writeln('${b.stationFrom} – ${b.stationTo} : ${b.startTime} – ${b.endTime} hrs');
+        if (b.output > 0) {
+          buffer.writeln('Run: ${b.output} Km');
+        }
+        if (b.remarks.trim().isNotEmpty) {
+          buffer.writeln('Remarks: ${b.remarks.trim()}');
+        }
+      } else {
+        buffer.writeln('Block – $blockIndex');
+        buffer.writeln('BT: ${b.startTime} – ${b.endTime} hrs');
+        buffer.writeln('${b.stationFrom} – ${b.stationTo} (${b.line})');
+
+        final outputStr = b.output.truncateToDouble() == b.output
+            ? b.output.toInt().toString()
+            : b.output.toString();
+        buffer.writeln('${b.activity}: $outputStr ${b.outputUnit}');
+
+        if (b.remarks.trim().isNotEmpty) {
+          buffer.writeln('Remarks: ${b.remarks.trim()}');
+        }
+        blockIndex++;
+      }
+      buffer.writeln();
+    }
+
+    // Totals section
+    final activityTotals = log.outputByActivity;
+    if (activityTotals.isNotEmpty) {
+      buffer.writeln('Total:');
+      double grandTotal = 0;
+      activityTotals.forEach((activity, totalVal) {
+        grandTotal += totalVal;
+        final totalStr = totalVal.truncateToDouble() == totalVal
+            ? totalVal.toInt().toString()
+            : totalVal.toString();
+        buffer.writeln('$activity: $totalStr Nos');
+      });
+
+      final grandTotalStr = grandTotal.truncateToDouble() == grandTotal
+          ? grandTotal.toInt().toString()
+          : grandTotal.toString();
+      buffer.writeln('= $grandTotalStr nos');
+      buffer.writeln();
+    }
+
+    // Stabled line
+    if (log.stabledStation.isNotEmpty) {
+      if (log.stabledTime.isNotEmpty) {
+        buffer.writeln('Machine stabled at ${log.stabledStation} – ${log.stabledTime} hrs.');
+      } else {
+        buffer.writeln('Machine stabled at ${log.stabledStation}.');
+      }
+    }
+
+    return buffer.toString().trim();
+  }
+
+  // --- Telegram Primary Sharing ---
+  static Future<void> shareToTelegram(ShiftLog log) async {
+    final text = formatReport(log);
+    final encoded = Uri.encodeComponent(text);
+
+    // Try native app scheme first
+    final tgNativeUrl = Uri.parse('tg://msg?text=$encoded');
+    try {
+      if (await canLaunchUrl(tgNativeUrl)) {
+        await launchUrl(tgNativeUrl, mode: LaunchMode.externalApplication);
+        return;
+      }
+    } catch (_) {}
+
+    // Fallback to Telegram Web Share API
+    final tgWebUrl = Uri.parse('https://t.me/share/url?url=&text=$encoded');
+    try {
+      if (await canLaunchUrl(tgWebUrl)) {
+        await launchUrl(tgWebUrl, mode: LaunchMode.externalApplication);
+        return;
+      }
+    } catch (_) {}
+
+    // Fallback to standard system share
+    // ignore: deprecated_member_use
+    await Share.share(text, subject: 'Progress of ${log.machineType}${log.machineNo} on ${log.date}');
+  }
+
+  // --- WhatsApp Secondary Sharing ---
+  static Future<void> shareToWhatsApp(ShiftLog log) async {
+    final text = formatReport(log);
+    final encoded = Uri.encodeComponent(text);
+    final whatsappUrl = Uri.parse('https://wa.me/?text=$encoded');
+
+    try {
+      if (await canLaunchUrl(whatsappUrl)) {
+        await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
+        return;
+      }
+    } catch (_) {}
+
+    // Fallback to standard system share
+    // ignore: deprecated_member_use
+    await Share.share(text, subject: 'Progress of ${log.machineType}${log.machineNo} on ${log.date}');
+  }
+
+  // --- Copy to Clipboard ---
+  static Future<void> copyToClipboard(ShiftLog log) async {
+    final text = formatReport(log);
+    await Clipboard.setData(ClipboardData(text: text));
+  }
+}

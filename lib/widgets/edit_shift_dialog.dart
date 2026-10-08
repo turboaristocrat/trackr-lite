@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/shift_log.dart';
+import '../services/station_service.dart';
 import '../theme/app_theme.dart';
 
 class EditShiftDialog extends StatefulWidget {
@@ -23,9 +24,12 @@ class _EditShiftDialogState extends State<EditShiftDialog> {
   late TextEditingController _machineNoCtrl;
   late String _division;
   late TextEditingController _sectionCtrl;
-  late TextEditingController _stabledCtrl;
+  late TextEditingController _readyStationCtrl;
+  late TextEditingController _readyTimeCtrl;
+  late TextEditingController _stabledStationCtrl;
 
   final List<String> _machineTypes = [
+    'UTV',
     'CSM',
     'DUOMAT',
     '09-3X',
@@ -47,15 +51,40 @@ class _EditShiftDialogState extends State<EditShiftDialog> {
     _machineNoCtrl = TextEditingController(text: widget.currentShift.machineNo);
     _division = widget.currentShift.division;
     _sectionCtrl = TextEditingController(text: widget.currentShift.section);
-    _stabledCtrl = TextEditingController(text: widget.currentShift.stabledStation);
+    _readyStationCtrl = TextEditingController(text: widget.currentShift.readyStation);
+    _readyTimeCtrl = TextEditingController(text: widget.currentShift.readyTime);
+    _stabledStationCtrl = TextEditingController(text: widget.currentShift.stabledStation);
   }
 
   @override
   void dispose() {
     _machineNoCtrl.dispose();
     _sectionCtrl.dispose();
-    _stabledCtrl.dispose();
+    _readyStationCtrl.dispose();
+    _readyTimeCtrl.dispose();
+    _stabledStationCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickReadyTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: const ColorScheme.dark(
+            primary: AppTheme.primary,
+            surface: AppTheme.surface,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) {
+      final h = picked.hour.toString().padLeft(2, '0');
+      final m = picked.minute.toString().padLeft(2, '0');
+      setState(() => _readyTimeCtrl.text = '$h:$m');
+    }
   }
 
   void _save() {
@@ -64,7 +93,9 @@ class _EditShiftDialogState extends State<EditShiftDialog> {
       machineNo: _machineNoCtrl.text.trim(),
       division: _division,
       section: _sectionCtrl.text.trim().toUpperCase(),
-      stabledStation: _stabledCtrl.text.trim().toUpperCase(),
+      readyStation: _readyStationCtrl.text.trim().toUpperCase(),
+      readyTime: _readyTimeCtrl.text.trim(),
+      stabledStation: _stabledStationCtrl.text.trim().toUpperCase(),
     );
     Navigator.pop(context, updated);
   }
@@ -92,7 +123,7 @@ class _EditShiftDialogState extends State<EditShiftDialog> {
             ),
             const SizedBox(height: 14),
 
-            // Machine Type & Number
+            // Machine Type & Number (e.g. UTV 005H)
             Row(
               children: [
                 Expanded(
@@ -108,13 +139,12 @@ class _EditShiftDialogState extends State<EditShiftDialog> {
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  flex: 2,
+                  flex: 3,
                   child: TextField(
                     controller: _machineNoCtrl,
-                    keyboardType: TextInputType.text,
                     decoration: const InputDecoration(
                       labelText: 'Machine No',
-                      hintText: 'e.g. 952',
+                      hintText: 'e.g. 005H',
                     ),
                   ),
                 ),
@@ -150,17 +180,81 @@ class _EditShiftDialogState extends State<EditShiftDialog> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
 
-            // Stabled Station
-            TextField(
-              controller: _stabledCtrl,
-              textCapitalization: TextCapitalization.characters,
-              decoration: const InputDecoration(
-                labelText: 'Stabled Station (optional)',
-                hintText: 'e.g. CGY',
-                prefixIcon: Icon(Icons.home_work_outlined, size: 18),
-              ),
+            // Machine Ready Line (Station & Time)
+            const Text('Machine Ready:', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: Autocomplete<String>(
+                    initialValue: TextEditingValue(text: _readyStationCtrl.text),
+                    optionsBuilder: (textEditingValue) {
+                      if (textEditingValue.text.isEmpty) return const [];
+                      return StationService.search(textEditingValue.text).map((s) => s.code);
+                    },
+                    onSelected: (selection) => _readyStationCtrl.text = selection,
+                    fieldViewBuilder: (ctx, ctrl, focus, onSub) {
+                      _readyStationCtrl = ctrl;
+                      return TextField(
+                        controller: ctrl,
+                        focusNode: focus,
+                        textCapitalization: TextCapitalization.characters,
+                        decoration: const InputDecoration(
+                          labelText: 'Ready At Station',
+                          hintText: 'e.g. CGY',
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  flex: 2,
+                  child: InkWell(
+                    onTap: _pickReadyTime,
+                    borderRadius: BorderRadius.circular(10),
+                    child: IgnorePointer(
+                      child: TextField(
+                        controller: _readyTimeCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Ready Time',
+                          hintText: '09:25',
+                          prefixIcon: Icon(Icons.access_time_rounded, size: 16),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+
+            // Machine Stabled Line (Station)
+            const Text('Machine Stabled:', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            Autocomplete<String>(
+              initialValue: TextEditingValue(text: _stabledStationCtrl.text),
+              optionsBuilder: (textEditingValue) {
+                if (textEditingValue.text.isEmpty) return const [];
+                return StationService.search(textEditingValue.text).map((s) => s.code);
+              },
+              onSelected: (selection) => _stabledStationCtrl.text = selection,
+              fieldViewBuilder: (ctx, ctrl, focus, onSub) {
+                _stabledStationCtrl = ctrl;
+                return TextField(
+                  controller: ctrl,
+                  focusNode: focus,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: const InputDecoration(
+                    labelText: 'Stabled Station',
+                    hintText: 'e.g. KTYM',
+                    prefixIcon: Icon(Icons.home_work_outlined, size: 18),
+                  ),
+                );
+              },
             ),
           ],
         ),

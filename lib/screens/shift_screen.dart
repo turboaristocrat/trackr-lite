@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/block_entry.dart';
 import '../models/shift_log.dart';
+import '../services/report_service.dart';
 import '../services/storage_service.dart';
-import '../services/whatsapp_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/add_block_dialog.dart';
 import '../widgets/edit_shift_dialog.dart';
@@ -107,6 +107,45 @@ class _ShiftScreenState extends State<ShiftScreen> {
     }
   }
 
+  void _previewReport() {
+    if (_shift == null) return;
+    final text = ReportService.formatReport(_shift!);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        title: const Row(
+          children: [
+            Icon(Icons.preview_rounded, color: AppTheme.primary, size: 20),
+            SizedBox(width: 8),
+            Text('Report Preview', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: SelectableText(
+            text,
+            style: const TextStyle(fontSize: 12.5, fontFamily: 'monospace', height: 1.4),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0088CC)),
+            icon: const Icon(Icons.send_rounded, size: 16),
+            label: const Text('Telegram'),
+            onPressed: () {
+              Navigator.pop(ctx);
+              ReportService.shareToTelegram(_shift!);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _completeShift() async {
     if (_shift == null || _shift!.blocks.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -121,7 +160,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
         backgroundColor: AppTheme.surface,
         title: const Text('Complete & Archive Shift?'),
         content: const Text(
-          'This will save today\'s shift into History and share the report to WhatsApp.',
+          'This will save today\'s shift into History and share the official report to Telegram.',
         ),
         actions: [
           TextButton(
@@ -129,6 +168,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
             child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary)),
           ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0088CC)),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Complete & Share'),
           ),
@@ -137,7 +177,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
     );
 
     if (confirm == true && mounted && _shift != null) {
-      await WhatsAppService.shareToWhatsApp(_shift!);
+      await ReportService.shareToTelegram(_shift!);
       await StorageService.completeAndArchiveShift(_shift!);
       widget.onShiftCompleted();
       await _loadShift();
@@ -162,16 +202,18 @@ class _ShiftScreenState extends State<ShiftScreen> {
     String displayDate;
     try {
       final dt = DateTime.parse(shift.date);
-      displayDate = DateFormat('EEE, dd MMM yyyy').format(dt);
+      displayDate = DateFormat('dd.MM.yyyy').format(dt);
     } catch (_) {
       displayDate = shift.date;
     }
 
+    int blockCounter = 1;
+
     return Column(
       children: [
-        // Top Header Card (Machine, Section, Date)
+        // Top Header Card (Machine, Section, Ready, Stabled)
         Container(
-          margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          margin: const EdgeInsets.fromLTRB(16, 12, 16, 6),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: AppTheme.surface,
@@ -182,7 +224,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
             children: [
               Row(
                 children: [
-                  // Date Chip (tappable)
+                  // Date Chip
                   InkWell(
                     onTap: _pickDate,
                     borderRadius: BorderRadius.circular(8),
@@ -202,24 +244,12 @@ class _ShiftScreenState extends State<ShiftScreen> {
                       ),
                     ),
                   ),
-                  const Spacer(),
-                  // Edit Setup Button
-                  IconButton(
-                    icon: const Icon(Icons.settings_outlined, size: 20, color: AppTheme.textSecondary),
-                    visualDensity: VisualDensity.compact,
-                    tooltip: 'Edit Machine / Section',
-                    onPressed: _editSetup,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              // Machine & Section Pills
-              InkWell(
-                onTap: _editSetup,
-                borderRadius: BorderRadius.circular(10),
-                child: Row(
-                  children: [
-                    Container(
+                  const SizedBox(width: 8),
+                  // Machine Badge
+                  InkWell(
+                    onTap: _editSetup,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
                         color: AppTheme.primary.withValues(alpha: 0.15),
@@ -227,49 +257,76 @@ class _ShiftScreenState extends State<ShiftScreen> {
                         border: Border.all(color: AppTheme.primary.withValues(alpha: 0.4)),
                       ),
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.train_rounded, size: 16, color: AppTheme.primary),
-                          const SizedBox(width: 6),
+                          const Icon(Icons.train_rounded, size: 15, color: AppTheme.primary),
+                          const SizedBox(width: 4),
                           Text(
-                            '${shift.machineType} ${shift.machineNo}',
+                            '${shift.machineType}${shift.machineNo}',
                             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.primary),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppTheme.secondary.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppTheme.secondary.withValues(alpha: 0.4)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.place_rounded, size: 16, color: AppTheme.secondary),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${shift.division} / ${shift.section}',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.secondary),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (shift.stabledStation.isNotEmpty) ...[
-                      const SizedBox(width: 8),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.preview_rounded, size: 20, color: AppTheme.secondary),
+                    visualDensity: VisualDensity.compact,
+                    tooltip: 'Preview Report',
+                    onPressed: _previewReport,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.settings_outlined, size: 20, color: AppTheme.textSecondary),
+                    visualDensity: VisualDensity.compact,
+                    tooltip: 'Edit Setup',
+                    onPressed: _editSetup,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              // Division & Section + Ready/Stabled Line
+              InkWell(
+                onTap: _editSetup,
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2.0),
+                  child: Row(
+                    children: [
                       Text(
-                        '🏠 ${shift.stabledStation}',
-                        style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                        '📍 ${shift.division} / ${shift.section}',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: AppTheme.textPrimary),
                       ),
+                      if (shift.readyStation.isNotEmpty && shift.readyTime.isNotEmpty) ...[
+                        const SizedBox(width: 10),
+                        Flexible(
+                          child: Text(
+                            '• Ready: ${shift.readyStation} (${shift.readyTime})',
+                            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                      if (shift.stabledStation.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            '• Stabled: ${shift.stabledStation}',
+                            style: const TextStyle(color: AppTheme.amberAccent, fontSize: 12),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 12),
-              // Quick KPI Stats Bar
+              const SizedBox(height: 10),
+
+              // KPI bar
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                 decoration: BoxDecoration(
                   color: AppTheme.background,
                   borderRadius: BorderRadius.circular(10),
@@ -278,18 +335,18 @@ class _ShiftScreenState extends State<ShiftScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     _buildKpi('${shift.blockCount}', 'Blocks', Icons.layers_rounded, AppTheme.primary),
-                    Container(width: 1, height: 20, color: AppTheme.outline.withValues(alpha: 0.3)),
+                    Container(width: 1, height: 18, color: AppTheme.outline.withValues(alpha: 0.3)),
                     _buildKpi(
                       shift.totalBlockOutput > 0
                           ? (shift.totalBlockOutput.truncateToDouble() == shift.totalBlockOutput
                               ? shift.totalBlockOutput.toInt().toString()
-                              : shift.totalBlockOutput.toStringAsFixed(1))
+                              : shift.totalBlockOutput.toStringAsFixed(0))
                           : '0',
-                      'Output',
+                      'Total Nos',
                       Icons.trending_up_rounded,
                       AppTheme.secondary,
                     ),
-                    Container(width: 1, height: 20, color: AppTheme.outline.withValues(alpha: 0.3)),
+                    Container(width: 1, height: 18, color: AppTheme.outline.withValues(alpha: 0.3)),
                     _buildKpi(
                       shift.totalTransitKm > 0 ? '${shift.totalTransitKm}k' : '0k',
                       'Transit',
@@ -312,7 +369,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
                 child: ElevatedButton.icon(
                   onPressed: () => _addOrEditBlock(isTransit: false),
                   icon: const Icon(Icons.add_rounded, size: 20),
-                  label: const Text('Log Track Block'),
+                  label: const Text('Log Block'),
                 ),
               ),
               const SizedBox(width: 10),
@@ -338,16 +395,17 @@ class _ShiftScreenState extends State<ShiftScreen> {
           child: shift.blocks.isEmpty
               ? _buildEmptyState()
               : ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 100),
                   itemCount: shift.blocks.length,
                   itemBuilder: (ctx, i) {
                     final block = shift.blocks[i];
-                    return _buildBlockCard(block, i + 1);
+                    final currentIdx = block.isTransit ? 0 : blockCounter++;
+                    return _buildBlockCard(block, currentIdx);
                   },
                 ),
         ),
 
-        // Bottom WhatsApp Share Bar
+        // Bottom Primary Telegram Share Bar
         _buildBottomShareBar(shift),
       ],
     );
@@ -356,8 +414,8 @@ class _ShiftScreenState extends State<ShiftScreen> {
   Widget _buildKpi(String value, String label, IconData icon, Color color) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: color),
-        const SizedBox(width: 6),
+        Icon(icon, size: 15, color: color),
+        const SizedBox(width: 5),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -392,9 +450,9 @@ class _ShiftScreenState extends State<ShiftScreen> {
             ),
             const SizedBox(height: 6),
             const Text(
-              'Tap "+ Log Track Block" to record your first block, or "+ Log Transit" for movement runs.',
+              'Tap "+ Log Block" to record Sleepers/Rails/Turnout work, or "+ Log Transit" for movement runs.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.4),
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 12.5, height: 1.4),
             ),
           ],
         ),
@@ -402,7 +460,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
     );
   }
 
-  Widget _buildBlockCard(BlockEntry b, int number) {
+  Widget _buildBlockCard(BlockEntry b, int blockNumber) {
     final isTransit = b.isTransit;
     final color = isTransit ? AppTheme.amberAccent : AppTheme.primary;
 
@@ -413,7 +471,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Row: number badge, Line, and Edit/Delete
+            // Header Row: Block Number or Transit, Time
             Row(
               children: [
                 Container(
@@ -424,14 +482,16 @@ class _ShiftScreenState extends State<ShiftScreen> {
                     border: Border.all(color: color.withValues(alpha: 0.4)),
                   ),
                   child: Text(
-                    isTransit ? '#$number TRANSIT' : '#$number ${b.line} LINE',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: color),
+                    isTransit ? 'TRANSIT' : 'Block – $blockNumber',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5, color: color),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '${b.startTime} - ${b.endTime}',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  isTransit
+                      ? '${b.startTime} – ${b.endTime} hrs'
+                      : 'BT: ${b.startTime} – ${b.endTime} hrs',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
                 ),
                 const Spacer(),
                 IconButton(
@@ -447,47 +507,37 @@ class _ShiftScreenState extends State<ShiftScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            // Route & Output
+
+            // Section & Line
             Row(
               children: [
                 Expanded(
-                  child: Row(
-                    children: [
-                      const Icon(Icons.trip_origin_rounded, size: 12, color: AppTheme.textSecondary),
-                      const SizedBox(width: 6),
-                      Text(
-                        b.stationFrom,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 6),
-                        child: Icon(Icons.arrow_forward_rounded, size: 14, color: AppTheme.textSecondary),
-                      ),
-                      Text(
-                        b.stationTo,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                      ),
-                    ],
+                  child: Text(
+                    isTransit
+                        ? '${b.stationFrom} – ${b.stationTo}'
+                        : '${b.stationFrom} – ${b.stationTo} (${b.line})',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                   ),
                 ),
                 // Output Highlight
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8),
+                if (b.output > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      isTransit
+                          ? 'Run: ${b.output} Km'
+                          : '${b.activity}: ${b.output.truncateToDouble() == b.output ? b.output.toInt() : b.output} ${b.outputUnit}',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: color),
+                    ),
                   ),
-                  child: Text(
-                    isTransit
-                        ? '${b.output} Km'
-                        : '${b.output.toStringAsFixed(b.output.truncateToDouble() == b.output ? 0 : 2)} ${b.outputUnit}',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: color),
-                  ),
-                ),
               ],
             ),
             if (b.remarks.isNotEmpty) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
                 'Remarks: ${b.remarks}',
                 style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontStyle: FontStyle.italic),
@@ -501,7 +551,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
 
   Widget _buildBottomShareBar(ShiftLog shift) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
       decoration: BoxDecoration(
         color: AppTheme.surface,
         border: Border(top: BorderSide(color: AppTheme.outline.withValues(alpha: 0.4))),
@@ -510,7 +560,41 @@ class _ShiftScreenState extends State<ShiftScreen> {
         top: false,
         child: Row(
           children: [
-            // Copy button
+            // Primary Telegram Button
+            Expanded(
+              flex: 4,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0088CC), // Telegram Blue
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                icon: const Icon(Icons.send_rounded, size: 18),
+                label: const Text(
+                  'Share to Telegram',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                ),
+                onPressed: () => ReportService.shareToTelegram(shift),
+              ),
+            ),
+            const SizedBox(width: 8),
+
+            // Secondary WhatsApp Button
+            IconButton.filledTonal(
+              style: IconButton.styleFrom(
+                backgroundColor: const Color(0xFF25D366).withValues(alpha: 0.2),
+                foregroundColor: const Color(0xFF25D366),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.all(12),
+              ),
+              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 20),
+              tooltip: 'Share via WhatsApp',
+              onPressed: () => ReportService.shareToWhatsApp(shift),
+            ),
+            const SizedBox(width: 6),
+
+            // Copy Report Button
             IconButton.filledTonal(
               style: IconButton.styleFrom(
                 backgroundColor: AppTheme.surfaceVariant,
@@ -518,10 +602,10 @@ class _ShiftScreenState extends State<ShiftScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 padding: const EdgeInsets.all(12),
               ),
-              icon: const Icon(Icons.copy_rounded, size: 20),
+              icon: const Icon(Icons.copy_rounded, size: 19),
               tooltip: 'Copy Report Text',
               onPressed: () async {
-                await WhatsAppService.copyToClipboard(shift);
+                await ReportService.copyToClipboard(shift);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Shift report copied to clipboard!')),
@@ -529,26 +613,9 @@ class _ShiftScreenState extends State<ShiftScreen> {
                 }
               },
             ),
-            const SizedBox(width: 8),
-            // Big WhatsApp Share Button
-            Expanded(
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF25D366), // WhatsApp Green
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                icon: const Icon(Icons.share_rounded, size: 20),
-                label: const Text(
-                  'Share WhatsApp Report',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                ),
-                onPressed: () => WhatsAppService.shareToWhatsApp(shift),
-              ),
-            ),
-            const SizedBox(width: 8),
-            // Save & Archive
+            const SizedBox(width: 6),
+
+            // Complete & Archive Button
             IconButton.filledTonal(
               style: IconButton.styleFrom(
                 backgroundColor: AppTheme.primary.withValues(alpha: 0.15),
@@ -557,7 +624,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
                 padding: const EdgeInsets.all(12),
               ),
               icon: const Icon(Icons.archive_outlined, size: 20),
-              tooltip: 'Complete & Archive Shift',
+              tooltip: 'Archive Shift to History',
               onPressed: _completeShift,
             ),
           ],

@@ -3,8 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/shift_log.dart';
+import '../services/report_service.dart';
 import '../services/storage_service.dart';
-import '../services/whatsapp_service.dart';
 import '../theme/app_theme.dart';
 
 class HistoryScreen extends StatefulWidget {
@@ -63,7 +63,7 @@ class HistoryScreenState extends State<HistoryScreen> {
   }
 
   void _showReportDialog(ShiftLog log) {
-    final text = WhatsAppService.formatReport(log);
+    final text = ReportService.formatReport(log);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -94,11 +94,16 @@ class HistoryScreenState extends State<HistoryScreen> {
               }
             },
           ),
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18, color: Color(0xFF25D366)),
+            tooltip: 'WhatsApp',
+            onPressed: () => ReportService.shareToWhatsApp(log),
+          ),
           ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF25D366)),
-            icon: const Icon(Icons.share_rounded, size: 16, color: Colors.white),
-            label: const Text('WhatsApp', style: TextStyle(color: Colors.white)),
-            onPressed: () => WhatsAppService.shareToWhatsApp(log),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0088CC)),
+            icon: const Icon(Icons.send_rounded, size: 16, color: Colors.white),
+            label: const Text('Telegram', style: TextStyle(color: Colors.white)),
+            onPressed: () => ReportService.shareToTelegram(log),
           ),
         ],
       ),
@@ -273,10 +278,16 @@ class HistoryScreenState extends State<HistoryScreen> {
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.share_rounded, size: 18, color: Color(0xFF25D366)),
+                    icon: const Icon(Icons.send_rounded, size: 18, color: Color(0xFF0088CC)),
+                    visualDensity: VisualDensity.compact,
+                    tooltip: 'Share to Telegram',
+                    onPressed: () => ReportService.shareToTelegram(log),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18, color: Color(0xFF25D366)),
                     visualDensity: VisualDensity.compact,
                     tooltip: 'Share to WhatsApp',
-                    onPressed: () => WhatsAppService.shareToWhatsApp(log),
+                    onPressed: () => ReportService.shareToWhatsApp(log),
                   ),
                   IconButton(
                     icon: const Icon(Icons.delete_outline_rounded, size: 18, color: AppTheme.redDanger),
