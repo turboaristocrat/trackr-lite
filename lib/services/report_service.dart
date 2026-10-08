@@ -104,41 +104,36 @@ class ReportService {
   static Future<void> shareToTelegram(ShiftLog log) async {
     final text = formatReport(log);
 
-    // Safeguard: Always copy formatted report to clipboard first so user never loses it
+    // Safeguard: Always copy formatted report to clipboard first so user can also paste anytime
     try {
       await Clipboard.setData(ClipboardData(text: text));
     } catch (_) {}
 
+    final subject = 'Progress of ${log.machineName} on ${log.date}';
+
+    // 1. On Web: Use native navigator.share if available.
+    // This allows the user to select Telegram from the OS share list,
+    // and passes the complete text message cleanly into Telegram's composer!
+    if (kIsWeb && canWebShare()) {
+      try {
+        final shared = await triggerWebShare(subject, text);
+        if (shared) return;
+      } catch (_) {}
+    }
+
     final encoded = Uri.encodeComponent(text);
     final tgDirectAppUri = 'tg://msg_url?url=&text=$encoded';
-    final tgAndroidIntentUri = 'intent://msg_url?url=&text=$encoded#Intent;scheme=tg;package=org.telegram.messenger;end';
     final tgUniversalHttps = 'https://t.me/share/url?url=&text=$encoded';
 
-    // 1. On Web / PWA: Try directly dispatching the native Telegram app URI
+    // 2. Direct deep-link via url_launcher or browser navigation
     if (kIsWeb) {
       try {
-        // Trigger browser navigation to tg:// which opens Telegram App directly
         openExternalUriDirect(tgDirectAppUri);
-        return;
-      } catch (_) {}
-
-      try {
-        // Fallback for Android Chrome browser to launch the Telegram app package
-        openExternalUriDirect(tgAndroidIntentUri);
         return;
       } catch (_) {}
     }
 
-    // 2. Try launching tg:// via url_launcher
-    try {
-      final launched = await launchUrl(
-        Uri.parse(tgDirectAppUri),
-        mode: LaunchMode.externalNonBrowserApplication,
-      );
-      if (launched) return;
-    } catch (_) {}
-
-    // 3. Fallback to universal https://t.me link
+    // 3. Try launching via url_launcher
     try {
       final launched = await launchUrl(
         Uri.parse(tgUniversalHttps),
@@ -148,10 +143,10 @@ class ReportService {
       if (launched) return;
     } catch (_) {}
 
-    // 4. Fallback to device system share sheet
+    // 4. Fallback to package:share_plus
     try {
       // ignore: deprecated_member_use
-      await Share.share(text, subject: 'Progress of ${log.machineName} on ${log.date}');
+      await Share.share(text, subject: subject);
     } catch (_) {}
   }
 
