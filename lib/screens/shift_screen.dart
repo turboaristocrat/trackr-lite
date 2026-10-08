@@ -470,40 +470,23 @@ class ShiftScreenState extends State<ShiftScreen> {
           ),
         ),
 
-        // Action Buttons (+ Log Block / + Transit)
+        // Single Unified Action Button (+ Log Block / Transit)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: () => _addOrEditBlock(isTransit: false),
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text('Log Block', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.textPrimary,
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    side: const BorderSide(color: AppTheme.borderColor),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: () => _addOrEditBlock(isTransit: true),
-                  icon: const Icon(Icons.directions_railway_rounded, size: 18, color: AppTheme.secondary),
-                  label: const Text('Log Transit', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
-                ),
-              ),
-            ],
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            onPressed: () => _addOrEditBlock(isTransit: false),
+            icon: const Icon(Icons.add_rounded, size: 20),
+            label: const Text(
+              'Log Block / Transit',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 0.2),
+            ),
           ),
         ),
 
@@ -639,7 +622,6 @@ class ShiftScreenState extends State<ShiftScreen> {
 
   Widget _buildBlockCard(BlockEntry b, int blockNumber) {
     final isTransit = b.isTransit;
-    final color = isTransit ? AppTheme.secondary : AppTheme.primary;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -649,25 +631,26 @@ class ShiftScreenState extends State<ShiftScreen> {
         border: Border.all(color: AppTheme.borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.015),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(15),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Row: Block Number or Transit, Time
+            // Top Header Line: Tag, Section & Line, Action Icons
             Row(
               children: [
+                // Block tag pill
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
                   decoration: BoxDecoration(
                     color: isTransit ? AppTheme.amberAccent.withValues(alpha: 0.12) : AppTheme.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(7),
+                    borderRadius: BorderRadius.circular(6),
                     border: Border.all(
                       color: isTransit ? AppTheme.amberAccent.withValues(alpha: 0.35) : AppTheme.borderColor,
                     ),
@@ -676,86 +659,159 @@ class ShiftScreenState extends State<ShiftScreen> {
                     isTransit ? 'TRANSIT' : 'Block – $blockNumber',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 11.5,
+                      fontSize: 11,
+                      letterSpacing: 0.3,
                       color: isTransit ? AppTheme.secondary : AppTheme.textPrimary,
                     ),
                   ),
                 ),
-                const SizedBox(width: 9),
-                Text(
-                  isTransit
-                      ? '${b.startTime} – ${b.endTime} hrs'
-                      : 'BT: ${b.startTime} – ${b.endTime} hrs',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: AppTheme.textPrimary),
+                const SizedBox(width: 8),
+
+                // Block Time Range
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceContainerLow.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.schedule_rounded, size: 12, color: AppTheme.textSecondary),
+                      const SizedBox(width: 4),
+                      Text(
+                        isTransit ? '${b.startTime} – ${b.endTime}' : 'BT: ${b.startTime} – ${b.endTime}',
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppTheme.textSecondary),
+                      ),
+                    ],
+                  ),
                 ),
                 const Spacer(),
+
+                // Edit & Delete Buttons
                 IconButton(
-                  icon: const Icon(Icons.edit_outlined, size: 18, color: AppTheme.textMuted),
+                  icon: const Icon(Icons.edit_outlined, size: 17, color: AppTheme.textMuted),
                   visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  tooltip: 'Edit block',
                   onPressed: () => _addOrEditBlock(existing: b),
                 ),
+                const SizedBox(width: 12),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline_rounded, size: 18, color: AppTheme.redDanger),
+                  icon: const Icon(Icons.delete_outline_rounded, size: 17, color: AppTheme.textMuted),
                   visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  tooltip: 'Delete block',
                   onPressed: () => _deleteBlock(b.id),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Middle: Section Station from - to and Line
+            Row(
+              children: [
+                const Icon(Icons.train_outlined, size: 16, color: AppTheme.textSecondary),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    isTransit
+                        ? '${b.stationFrom}  ➔  ${b.stationTo}'
+                        : '${b.stationFrom}  ➔  ${b.stationTo}   •   ${b.line} Line',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14.5,
+                      letterSpacing: -0.2,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 10),
 
-            // Section & Line
-            Text(
-              isTransit
-                  ? '${b.stationFrom} – ${b.stationTo}'
-                  : '${b.stationFrom} – ${b.stationTo} (${b.line})',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5, color: AppTheme.textPrimary),
-            ),
-            const SizedBox(height: 8),
-
-            // Output items chips/pills
-            Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              children: isTransit
-                  ? [
-                      if (b.output > 0)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.06),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: color.withValues(alpha: 0.18)),
+            // Work items / Activities
+            if (isTransit) ...[
+              if (b.output > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppTheme.amberAccent.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppTheme.amberAccent.withValues(alpha: 0.3)),
+                  ),
+                  child: Text(
+                    'Transit Distance: ${b.output} Km',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.secondary),
+                  ),
+                ),
+            ] else ...[
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: b.items.map((item) {
+                  final outStr = item.output.truncateToDouble() == item.output
+                      ? item.output.toInt().toString()
+                      : item.output.toString();
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppTheme.borderColor),
+                    ),
+                    child: RichText(
+                      text: TextSpan(
+                        style: const TextStyle(fontSize: 12, color: AppTheme.textPrimary),
+                        children: [
+                          TextSpan(
+                            text: '${item.activity}: ',
+                            style: const TextStyle(fontWeight: FontWeight.w500, color: AppTheme.textSecondary),
                           ),
-                          child: Text(
-                            'Run: ${b.output} Km',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: color),
+                          TextSpan(
+                            text: '$outStr ${item.outputUnit}',
+                            style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
                           ),
-                        ),
-                    ]
-                  : b.items.map((item) {
-                      final outStr = item.output.truncateToDouble() == item.output
-                          ? item.output.toInt().toString()
-                          : item.output.toString();
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.06),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: color.withValues(alpha: 0.18)),
-                        ),
-                        child: Text(
-                          '${item.activity}: $outStr ${item.outputUnit}',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: color),
-                        ),
-                      );
-                    }).toList(),
-            ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
 
+            // Remarks line
             if (b.remarks.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Remarks: ${b.remarks}',
-                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontStyle: FontStyle.italic),
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceContainerLow.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(top: 1),
+                      child: Icon(Icons.notes_rounded, size: 14, color: AppTheme.textMuted),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        b.remarks,
+                        style: const TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ],
