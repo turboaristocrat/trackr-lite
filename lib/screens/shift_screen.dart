@@ -470,22 +470,33 @@ class ShiftScreenState extends State<ShiftScreen> {
           ),
         ),
 
-        // Single Unified Action Button (+ Log Block / Transit)
+        // Single Unified Action Button (+ Log Block / Transit) - Full Width Railway Yellow
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            ),
-            onPressed: () => _addOrEditBlock(isTransit: false),
-            icon: const Icon(Icons.add_rounded, size: 20),
-            label: const Text(
-              'Log Block / Transit',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 0.2),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFDB324), // Railway Signal Yellow / Amber
+                foregroundColor: const Color(0xFF191C20), // High-contrast dark typography
+                padding: const EdgeInsets.symmetric(vertical: 15),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: BorderSide(color: const Color(0xFFD69400).withValues(alpha: 0.5), width: 1),
+                ),
+              ),
+              onPressed: () => _addOrEditBlock(isTransit: false),
+              icon: const Icon(Icons.add_rounded, size: 22, color: Color(0xFF191C20)),
+              label: const Text(
+                'Log Block / Transit',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14.5,
+                  letterSpacing: 0.3,
+                  color: Color(0xFF191C20),
+                ),
+              ),
             ),
           ),
         ),
