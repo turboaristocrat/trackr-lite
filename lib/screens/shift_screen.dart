@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/block_entry.dart';
-import '../models/reminder_item.dart';
 import '../models/shift_log.dart';
 import '../services/report_service.dart';
 import '../services/station_service.dart';
@@ -24,26 +23,11 @@ class ShiftScreen extends StatefulWidget {
 class _ShiftScreenState extends State<ShiftScreen> {
   ShiftLog? _shift;
   bool _isLoading = true;
-  final TextEditingController _newNoteCtrl = TextEditingController();
-
-  final List<String> _quickReminders = [
-    '⛽ Diesel Refueling',
-    '🔧 Check Hydraulic Oil',
-    '⚠️ Caution Order Noted',
-    '📋 Tools & Clamp Check',
-    '📝 Shift Handover Notes',
-  ];
 
   @override
   void initState() {
     super.initState();
     _loadShift();
-  }
-
-  @override
-  void dispose() {
-    _newNoteCtrl.dispose();
-    super.dispose();
   }
 
   Future<void> _loadShift() async {
@@ -123,34 +107,6 @@ class _ShiftScreenState extends State<ShiftScreen> {
         stabledTime: res['time'],
       ));
     }
-  }
-
-  Future<void> _addReminder(String text) async {
-    if (text.trim().isEmpty || _shift == null) return;
-    final newItem = ReminderItem(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      text: text.trim(),
-    );
-    final reminders = List<ReminderItem>.from(_shift!.reminders)..add(newItem);
-    await _saveShift(_shift!.copyWith(reminders: reminders));
-    _newNoteCtrl.clear();
-  }
-
-  Future<void> _toggleReminder(String id) async {
-    if (_shift == null) return;
-    final reminders = _shift!.reminders.map((r) {
-      if (r.id == id) {
-        return r.copyWith(isDone: !r.isDone);
-      }
-      return r;
-    }).toList();
-    await _saveShift(_shift!.copyWith(reminders: reminders));
-  }
-
-  Future<void> _deleteReminder(String id) async {
-    if (_shift == null) return;
-    final reminders = List<ReminderItem>.from(_shift!.reminders)..removeWhere((r) => r.id == id);
-    await _saveShift(_shift!.copyWith(reminders: reminders));
   }
 
   Future<void> _pickDate() async {
@@ -503,158 +459,28 @@ class _ShiftScreenState extends State<ShiftScreen> {
           ),
         ),
 
-        // Blocks List + Notes & Reminders + Machine Stabled at the bottom
+        // Blocks List + Machine Stabled at the bottom
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
-            itemCount: shift.blocks.length + 2, // +1 for Notes/Reminders, +1 for Machine Stabled
-            itemBuilder: (ctx, i) {
-              if (i < shift.blocks.length) {
-                final block = shift.blocks[i];
-                final currentIdx = block.isTransit ? 0 : blockCounter++;
-                return _buildBlockCard(block, currentIdx);
-              } else if (i == shift.blocks.length) {
-                // ================= NOTES & REMINDERS SECTION =================
-                return _buildNotesAndRemindersSection(shift);
-              } else {
-                // ================= DEDICATED MACHINE STABLED SECTION =================
-                return _buildMachineStabledCard(shift);
-              }
-            },
-          ),
+          child: shift.blocks.isEmpty
+              ? _buildEmptyState()
+              : ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
+                  itemCount: shift.blocks.length + 1,
+                  itemBuilder: (ctx, i) {
+                    if (i == shift.blocks.length) {
+                      // ================= DEDICATED MACHINE STABLED SECTION =================
+                      return _buildMachineStabledCard(shift);
+                    }
+                    final block = shift.blocks[i];
+                    final currentIdx = block.isTransit ? 0 : blockCounter++;
+                    return _buildBlockCard(block, currentIdx);
+                  },
+                ),
         ),
 
         // Bottom Primary Telegram Share Bar
         _buildBottomShareBar(shift),
       ],
-    );
-  }
-
-  Widget _buildNotesAndRemindersSection(ShiftLog shift) {
-    return Container(
-      margin: const EdgeInsets.only(top: 8, bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppTheme.cardBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.checklist_rounded, color: AppTheme.secondary, size: 20),
-              const SizedBox(width: 8),
-              const Text(
-                'Notes & Reminders',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textPrimary),
-              ),
-              const Spacer(),
-              if (shift.reminders.isNotEmpty)
-                Text(
-                  '${shift.reminders.where((r) => r.isDone).length}/${shift.reminders.length} done',
-                  style: const TextStyle(fontSize: 11.5, color: AppTheme.textMuted, fontWeight: FontWeight.w600),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // Quick reminders pills
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: _quickReminders.map((rem) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: ActionChip(
-                    label: Text(rem, style: const TextStyle(fontSize: 11.5)),
-                    backgroundColor: AppTheme.surfaceContainerLow,
-                    side: const BorderSide(color: AppTheme.borderColor, width: 0.8),
-                    onPressed: () => _addReminder(rem),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-          const SizedBox(height: 10),
-
-          // Input field for new custom note
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _newNoteCtrl,
-                  decoration: const InputDecoration(
-                    hintText: 'Add note or reminder...',
-                    prefixIcon: Icon(Icons.add_task_rounded, size: 18),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                  onSubmitted: (val) => _addReminder(val),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton.filled(
-                style: IconButton.styleFrom(
-                  backgroundColor: AppTheme.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                icon: const Icon(Icons.add_rounded, size: 20),
-                onPressed: () => _addReminder(_newNoteCtrl.text),
-              ),
-            ],
-          ),
-
-          // List of current reminders
-          if (shift.reminders.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            ...shift.reminders.map((r) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: r.isDone ? AppTheme.surfaceContainerLow : AppTheme.cardBg,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.6)),
-                  ),
-                  child: Row(
-                    children: [
-                      InkWell(
-                        onTap: () => _toggleReminder(r.id),
-                        child: Icon(
-                          r.isDone ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
-                          color: r.isDone ? AppTheme.railSafetyGreen : AppTheme.textMuted,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          r.text,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: r.isDone ? AppTheme.textMuted : AppTheme.textPrimary,
-                            decoration: r.isDone ? TextDecoration.lineThrough : null,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close_rounded, size: 16, color: AppTheme.textMuted),
-                        visualDensity: VisualDensity.compact,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: () => _deleteReminder(r.id),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }),
-          ],
-        ],
-      ),
     );
   }
 
@@ -720,6 +546,38 @@ class _ShiftScreenState extends State<ShiftScreen> {
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(
+                color: AppTheme.surfaceContainerLow,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.edit_calendar_rounded, size: 36, color: AppTheme.textMuted),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'No blocks logged today',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Tap "+ Log Block" to record Sleepers/Rails work, or "+ Log Transit" for movement runs.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 12.5, height: 1.4),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'screens/history_screen.dart';
+import 'screens/notes_screen.dart';
 import 'screens/shift_screen.dart';
 import 'theme/app_theme.dart';
 import 'widgets/trackr_logo.dart';
@@ -34,6 +35,7 @@ class MainScaffold extends StatefulWidget {
 class _MainScaffoldState extends State<MainScaffold> {
   int _currentIndex = 0;
   final GlobalKey<HistoryScreenState> _historyKey = GlobalKey<HistoryScreenState>();
+  final GlobalKey<NotesScreenState> _notesKey = GlobalKey<NotesScreenState>();
 
   @override
   Widget build(BuildContext context) {
@@ -65,20 +67,33 @@ class _MainScaffoldState extends State<MainScaffold> {
           ShiftScreen(
             onShiftCompleted: () {
               _historyKey.currentState?.refreshHistory();
-              setState(() => _currentIndex = 1);
+              setState(() => _currentIndex = 2);
             },
           ),
+          NotesScreen(key: _notesKey),
           HistoryScreen(key: _historyKey),
         ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
-        onDestinationSelected: (idx) => setState(() => _currentIndex = idx),
+        onDestinationSelected: (idx) {
+          if (idx == 1) {
+            _notesKey.currentState?.refreshNotes();
+          } else if (idx == 2) {
+            _historyKey.currentState?.refreshHistory();
+          }
+          setState(() => _currentIndex = idx);
+        },
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.edit_note_rounded),
             selectedIcon: Icon(Icons.edit_note_rounded),
             label: 'Active Shift',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.checklist_rounded),
+            selectedIcon: Icon(Icons.checklist_rounded),
+            label: 'Notes',
           ),
           NavigationDestination(
             icon: Icon(Icons.history_rounded),

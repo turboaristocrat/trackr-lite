@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/reminder_item.dart';
 import '../models/shift_log.dart';
 
 class StorageService {
@@ -11,6 +12,7 @@ class StorageService {
   static const _sectionKey = 'trackr_lite_section';
   static const _readyStationKey = 'trackr_lite_ready_station';
   static const _stabledStationKey = 'trackr_lite_stabled_station';
+  static const _notesKey = 'trackr_lite_notes';
 
   // --- Active Shift ---
   static Future<ShiftLog> getActiveShift() async {
@@ -94,16 +96,44 @@ class StorageService {
     await prefs.setString(_historyKey, jsonEncode(rawList));
   }
 
+  // --- Notes & Reminders ---
+  static Future<List<ReminderItem>> getNotes() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_notesKey);
+    if (raw == null) {
+      // Default initial notes if empty
+      return const [
+        ReminderItem(id: 'r1', text: 'Check hydraulic oil & system pressure'),
+        ReminderItem(id: 'r2', text: 'Diesel refueling required at depot'),
+        ReminderItem(id: 'r3', text: 'Verify tines/clamp condition'),
+      ];
+    }
+    try {
+      final list = jsonDecode(raw) as List<dynamic>;
+      return list.map((e) => ReminderItem.fromJson(e as Map<String, dynamic>)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static Future<void> saveNotes(List<ReminderItem> notes) async {
+    final prefs = await SharedPreferences.getInstance();
+    final rawList = notes.map((n) => n.toJson()).toList();
+    await prefs.setString(_notesKey, jsonEncode(rawList));
+  }
+
   // --- Backup Export / Import ---
   static Future<String> exportBackupJson() async {
     final active = await getActiveShift();
     final history = await getHistory();
+    final notes = await getNotes();
     final map = {
       'app': 'TRACKR_Lite',
       'version': '1.0.0',
       'exportedAt': DateTime.now().toIso8601String(),
       'activeShift': active.toJson(),
       'history': history.map((h) => h.toJson()).toList(),
+      'notes': notes.map((n) => n.toJson()).toList(),
     };
     return const JsonEncoder.withIndent('  ').convert(map);
   }
@@ -123,6 +153,13 @@ class StorageService {
       if (map['activeShift'] != null) {
         final active = ShiftLog.fromJson(map['activeShift'] as Map<String, dynamic>);
         await saveActiveShift(active);
+      }
+
+      if (map['notes'] != null) {
+        final notesList = (map['notes'] as List<dynamic>)
+            .map((e) => ReminderItem.fromJson(e as Map<String, dynamic>))
+            .toList();
+        await saveNotes(notesList);
       }
 
       return true;

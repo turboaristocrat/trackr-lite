@@ -16,6 +16,7 @@ void main() {
     expect(find.text('TRACKR'), findsOneWidget);
     expect(find.text('LITE'), findsOneWidget);
     expect(find.text('Active Shift'), findsOneWidget);
+    expect(find.text('Notes'), findsOneWidget);
     expect(find.text('History'), findsOneWidget);
   });
 }
