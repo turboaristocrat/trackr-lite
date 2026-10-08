@@ -39,9 +39,9 @@ void main() {
             stationFrom: 'CGY',
             stationTo: 'CGV',
             line: 'UP',
-            activity: 'Sleepers unloaded',
-            output: 16,
-            outputUnit: 'Nos',
+            items: [
+              WorkItem(activity: 'Sleepers unloaded', output: 16, outputUnit: 'Nos'),
+            ],
           ),
           BlockEntry(
             id: 'b2',
@@ -50,9 +50,9 @@ void main() {
             stationFrom: 'CGY',
             stationTo: 'TRVL',
             line: 'DN',
-            activity: 'Sleepers loaded',
-            output: 64,
-            outputUnit: 'Nos',
+            items: [
+              WorkItem(activity: 'Sleepers loaded', output: 64, outputUnit: 'Nos'),
+            ],
           ),
           BlockEntry(
             id: 'b3',
@@ -61,9 +61,9 @@ void main() {
             stationFrom: 'CGY',
             stationTo: 'CGV',
             line: 'UP',
-            activity: 'Sleepers unloaded',
-            output: 24,
-            outputUnit: 'Nos',
+            items: [
+              WorkItem(activity: 'Sleepers unloaded', output: 24, outputUnit: 'Nos'),
+            ],
           ),
           BlockEntry(
             id: 'b4',
@@ -95,6 +95,38 @@ void main() {
       expect(report, contains('= 104 nos'));
       expect(report, contains('Machine stabled at KTYM.'));
     });
+
+    test('Formats multiple work items within a single block', () {
+      const log = ShiftLog(
+        date: '2026-09-12',
+        machineName: 'UTV005H',
+        division: 'TVC',
+        section: 'KTYM',
+        blocks: [
+          BlockEntry(
+            id: 'm1',
+            startTime: '10:00',
+            endTime: '11:00',
+            stationFrom: 'CGY',
+            stationTo: 'CGV',
+            line: 'Both',
+            items: [
+              WorkItem(activity: 'Sleepers unloaded', output: 20, outputUnit: 'Nos'),
+              WorkItem(activity: 'Rails loaded', output: 5, outputUnit: 'Nos'),
+            ],
+          ),
+        ],
+      );
+
+      final report = ReportService.formatReport(log);
+      expect(report, contains('CGY – CGV (Both)'));
+      expect(report, contains('Sleepers unloaded: 20 Nos'));
+      expect(report, contains('Rails loaded: 5 Nos'));
+      expect(report, contains('Total:'));
+      expect(report, contains('Sleepers unloaded: 20 Nos'));
+      expect(report, contains('Rails loaded: 5 Nos'));
+      expect(report, contains('= 25 nos'));
+    });
   });
 
   group('StorageService', () {
@@ -111,8 +143,9 @@ void main() {
             endTime: '04:00',
             stationFrom: 'TCR',
             stationTo: 'OLR',
-            activity: 'Tamping done',
-            output: 1500,
+            items: [
+              WorkItem(activity: 'Tamping done', output: 1500, outputUnit: 'Meters'),
+            ],
           ),
         ],
       );

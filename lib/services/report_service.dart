@@ -42,10 +42,19 @@ class ReportService {
         buffer.writeln('BT: ${b.startTime} – ${b.endTime} hrs');
         buffer.writeln('${b.stationFrom} – ${b.stationTo} (${b.line})');
 
-        final outputStr = b.output.truncateToDouble() == b.output
-            ? b.output.toInt().toString()
-            : b.output.toString();
-        buffer.writeln('${b.activity}: $outputStr ${b.outputUnit}');
+        if (b.items.isNotEmpty) {
+          for (final item in b.items) {
+            final outputStr = item.output.truncateToDouble() == item.output
+                ? item.output.toInt().toString()
+                : item.output.toString();
+            buffer.writeln('${item.activity}: $outputStr ${item.outputUnit}');
+          }
+        } else if (b.output > 0 || b.activity.isNotEmpty) {
+          final outputStr = b.output.truncateToDouble() == b.output
+              ? b.output.toInt().toString()
+              : b.output.toString();
+          buffer.writeln('${b.activity}: $outputStr ${b.outputUnit}');
+        }
 
         if (b.remarks.trim().isNotEmpty) {
           buffer.writeln('Remarks: ${b.remarks.trim()}');

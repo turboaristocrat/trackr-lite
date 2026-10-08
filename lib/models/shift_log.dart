@@ -38,13 +38,17 @@ class ShiftLog {
   int get blockCount => blocks.where((b) => !b.isTransit).length;
   int get transitCount => blocks.where((b) => b.isTransit).length;
 
-  // Group outputs by activity (e.g. 'Sleepers loaded', 'Sleepers unloaded')
+  // Group outputs by activity across all items in all blocks
   Map<String, double> get outputByActivity {
     final map = <String, double>{};
     for (final b in blocks) {
-      if (!b.isTransit && b.output > 0) {
-        final act = b.activity.trim().isNotEmpty ? b.activity.trim() : 'Output';
-        map[act] = (map[act] ?? 0.0) + b.output;
+      if (!b.isTransit) {
+        for (final item in b.items) {
+          if (item.output > 0) {
+            final act = item.activity.trim().isNotEmpty ? item.activity.trim() : 'Output';
+            map[act] = (map[act] ?? 0.0) + item.output;
+          }
+        }
       }
     }
     return map;
