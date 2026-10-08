@@ -4,6 +4,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/reminder_item.dart';
 import '../models/shift_log.dart';
 
+enum SaveHistoryResult {
+  savedNew,
+  updated,
+  noChanges,
+}
+
 class StorageService {
   static const _activeShiftKey = 'trackr_lite_active_shift';
   static const _historyKey = 'trackr_lite_history';
@@ -60,6 +66,39 @@ class StorageService {
     }
     if (log.stabledStation.isNotEmpty) {
       await prefs.setString(_stabledStationKey, log.stabledStation);
+    }
+  }
+
+  /// Saves or updates the current shift in History.
+  /// Does NOT clear the active shift, so user can keep editing if they want.
+  /// If the shift for this date already exists in history:
+  /// - If content is identical: returns [SaveHistoryResult.noChanges]
+  /// - If content differs: updates it and returns [SaveHistoryResult.updated]
+  /// Otherwise inserts it and returns [SaveHistoryResult.savedNew]
+  static Future<SaveHistoryResult> saveOrUpdateHistoryShift(ShiftLog log) async {
+    final prefs = await SharedPreferences.getInstance();
+    final history = await getHistory();
+
+    final existingIndex = history.indexWhere((h) => h.date == log.date);
+    if (existingIndex != -1) {
+      final existingJson = jsonEncode(history[existingIndex].toJson());
+      final currentJson = jsonEncode(log.toJson());
+
+      if (existingJson == currentJson) {
+        return SaveHistoryResult.noChanges;
+      }
+
+      // Update existing history entry
+      history[existingIndex] = log;
+      final rawList = history.map((h) => h.toJson()).toList();
+      await prefs.setString(_historyKey, jsonEncode(rawList));
+      return SaveHistoryResult.updated;
+    } else {
+      // New shift entry in history
+      history.insert(0, log);
+      final rawList = history.map((h) => h.toJson()).toList();
+      await prefs.setString(_historyKey, jsonEncode(rawList));
+      return SaveHistoryResult.savedNew;
     }
   }
 

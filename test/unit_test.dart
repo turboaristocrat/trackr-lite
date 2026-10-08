@@ -155,11 +155,27 @@ void main() {
       expect(fetched.machineName, 'DUOMAT 814');
       expect(fetched.blocks.length, 1);
 
-      // Complete & Archive
-      await StorageService.completeAndArchiveShift(updated);
-      final history = await StorageService.getHistory();
+      // Test saveOrUpdateHistoryShift
+      // 1. Initial save
+      final res1 = await StorageService.saveOrUpdateHistoryShift(updated);
+      expect(res1, SaveHistoryResult.savedNew);
+      var history = await StorageService.getHistory();
       expect(history.length, 1);
       expect(history.first.machineName, 'DUOMAT 814');
+
+      // 2. Press again without change
+      final res2 = await StorageService.saveOrUpdateHistoryShift(updated);
+      expect(res2, SaveHistoryResult.noChanges);
+      history = await StorageService.getHistory();
+      expect(history.length, 1);
+
+      // 3. Press again with change
+      final modified = updated.copyWith(section: 'ALLP');
+      final res3 = await StorageService.saveOrUpdateHistoryShift(modified);
+      expect(res3, SaveHistoryResult.updated);
+      history = await StorageService.getHistory();
+      expect(history.length, 1);
+      expect(history.first.section, 'ALLP');
     });
 
     test('Export and import backup JSON', () async {

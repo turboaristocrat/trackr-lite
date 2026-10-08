@@ -187,40 +187,38 @@ class ShiftScreenState extends State<ShiftScreen> {
       return;
     }
 
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.cardBg,
-        title: const Text('Complete & Archive Shift?'),
-        content: const Text(
-          'This will save today\'s shift into History and share the official report to Telegram.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.telegramBlue),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Complete & Share'),
-          ),
-        ],
-      ),
-    );
+    final result = await StorageService.saveOrUpdateHistoryShift(_shift!);
+    widget.onShiftCompleted();
 
-    if (confirm == true && mounted && _shift != null) {
-      await ReportService.shareToTelegram(_shift!);
-      await StorageService.completeAndArchiveShift(_shift!);
-      widget.onShiftCompleted();
-      await refreshShift();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Shift archived to History successfully!'),
-            backgroundColor: AppTheme.railSafetyGreen,
-          ),
-        );
+    if (mounted) {
+      switch (result) {
+        case SaveHistoryResult.savedNew:
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Shift saved to History successfully!'),
+              backgroundColor: AppTheme.railSafetyGreen,
+              duration: Duration(seconds: 2),
+            ),
+          );
+          break;
+        case SaveHistoryResult.updated:
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('History updated with latest shift changes!'),
+              backgroundColor: AppTheme.railSafetyGreen,
+              duration: Duration(seconds: 2),
+            ),
+          );
+          break;
+        case SaveHistoryResult.noChanges:
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Shift is already saved with no changes.'),
+              backgroundColor: AppTheme.secondary,
+              duration: Duration(seconds: 2),
+            ),
+          );
+          break;
       }
     }
   }
@@ -906,7 +904,7 @@ class ShiftScreenState extends State<ShiftScreen> {
                 padding: const EdgeInsets.all(12),
               ),
               icon: const Icon(Icons.archive_outlined, size: 20),
-              tooltip: 'Archive Shift to History',
+              tooltip: 'Save to History',
               onPressed: _completeShift,
             ),
           ],

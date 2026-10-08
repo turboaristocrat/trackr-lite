@@ -62,7 +62,6 @@ class _MainScaffoldState extends State<MainScaffold> {
             key: _shiftKey,
             onShiftCompleted: () {
               _historyKey.currentState?.refreshHistory();
-              setState(() => _currentIndex = 2);
             },
           ),
           NotesScreen(key: _notesKey),
