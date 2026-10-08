@@ -1,8 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/shift_log.dart';
+
+import 'web_launcher_stub.dart'
+    if (dart.library.js_interop) 'web_launcher_web.dart';
 
 class ReportService {
   static String formatReport(ShiftLog log) {
@@ -106,31 +110,45 @@ class ReportService {
     } catch (_) {}
 
     final encoded = Uri.encodeComponent(text);
-    // https://t.me/share/url?url=&text=... is the official universal Telegram share link
-    // It works across iOS, Android, and Desktop (redirects to installed Telegram or Telegram Web)
-    final tgHttpsUrl = Uri.parse('https://t.me/share/url?url=&text=$encoded');
-    final tgNativeUri = Uri.parse('tg://msg?text=$encoded');
+    final tgDirectAppUri = 'tg://msg_url?url=&text=$encoded';
+    final tgAndroidIntentUri = 'intent://msg_url?url=&text=$encoded#Intent;scheme=tg;package=org.telegram.messenger;end';
+    final tgUniversalHttps = 'https://t.me/share/url?url=&text=$encoded';
 
-    // 1. Try launching the universal https://t.me link (works seamlessly on mobile & browser)
+    // 1. On Web / PWA: Try directly dispatching the native Telegram app URI
+    if (kIsWeb) {
+      try {
+        // Trigger browser navigation to tg:// which opens Telegram App directly
+        openExternalUriDirect(tgDirectAppUri);
+        return;
+      } catch (_) {}
+
+      try {
+        // Fallback for Android Chrome browser to launch the Telegram app package
+        openExternalUriDirect(tgAndroidIntentUri);
+        return;
+      } catch (_) {}
+    }
+
+    // 2. Try launching tg:// via url_launcher
     try {
       final launched = await launchUrl(
-        tgHttpsUrl,
+        Uri.parse(tgDirectAppUri),
+        mode: LaunchMode.externalNonBrowserApplication,
+      );
+      if (launched) return;
+    } catch (_) {}
+
+    // 3. Fallback to universal https://t.me link
+    try {
+      final launched = await launchUrl(
+        Uri.parse(tgUniversalHttps),
         mode: LaunchMode.externalApplication,
         webOnlyWindowName: '_blank',
       );
       if (launched) return;
     } catch (_) {}
 
-    // 2. Try native app scheme directly (for installed native apps)
-    try {
-      final launched = await launchUrl(
-        tgNativeUri,
-        mode: LaunchMode.externalApplication,
-      );
-      if (launched) return;
-    } catch (_) {}
-
-    // 3. Fallback to device system share sheet
+    // 4. Fallback to device system share sheet
     try {
       // ignore: deprecated_member_use
       await Share.share(text, subject: 'Progress of ${log.machineName} on ${log.date}');

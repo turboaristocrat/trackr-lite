@@ -163,13 +163,24 @@ class StorageService {
 
   // --- Backup Export / Import ---
   static Future<String> exportBackupJson() async {
+    final prefs = await SharedPreferences.getInstance();
     final active = await getActiveShift();
     final history = await getHistory();
     final notes = await getNotes();
+
+    final preferences = {
+      'machineName': prefs.getString(_machineNameKey) ?? active.machineName,
+      'division': prefs.getString(_divisionKey) ?? active.division,
+      'section': prefs.getString(_sectionKey) ?? active.section,
+      'readyStation': prefs.getString(_readyStationKey) ?? active.readyStation,
+      'stabledStation': prefs.getString(_stabledStationKey) ?? active.stabledStation,
+    };
+
     final map = {
       'app': 'TRACKR_Lite',
       'version': '1.0.0',
       'exportedAt': DateTime.now().toIso8601String(),
+      'preferences': preferences,
       'activeShift': active.toJson(),
       'history': history.map((h) => h.toJson()).toList(),
       'notes': notes.map((n) => n.toJson()).toList(),
@@ -181,6 +192,15 @@ class StorageService {
     try {
       final map = jsonDecode(jsonString) as Map<String, dynamic>;
       final prefs = await SharedPreferences.getInstance();
+
+      if (map['preferences'] is Map<String, dynamic>) {
+        final p = map['preferences'] as Map<String, dynamic>;
+        if (p['machineName'] != null) await prefs.setString(_machineNameKey, p['machineName'] as String);
+        if (p['division'] != null) await prefs.setString(_divisionKey, p['division'] as String);
+        if (p['section'] != null) await prefs.setString(_sectionKey, p['section'] as String);
+        if (p['readyStation'] != null) await prefs.setString(_readyStationKey, p['readyStation'] as String);
+        if (p['stabledStation'] != null) await prefs.setString(_stabledStationKey, p['stabledStation'] as String);
+      }
 
       if (map['history'] != null) {
         final list = (map['history'] as List<dynamic>)
