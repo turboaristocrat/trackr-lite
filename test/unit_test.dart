@@ -185,5 +185,18 @@ void main() {
       final success = await StorageService.importBackupJson(exportJson);
       expect(success, isTrue);
     });
+
+    test('resetAllData resets active shift, history, and notes to 0', () async {
+      await StorageService.resetAllData();
+      final fresh = await StorageService.getActiveShift();
+      final history = await StorageService.getHistory();
+      final notes = await StorageService.getNotes();
+
+      expect(fresh.blocks, isEmpty);
+      expect(fresh.blockCount, 0);
+      expect(fresh.totalBlockOutput, 0.0);
+      expect(history, isEmpty);
+      expect(notes, isEmpty);
+    });
   });
 }

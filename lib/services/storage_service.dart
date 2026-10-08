@@ -34,25 +34,35 @@ class StorageService {
     }
 
     // Fallbacks or remembered preferences
-    final mName = prefs.getString(_machineNameKey) ??
-        '${prefs.getString('trackr_lite_machine_type') ?? 'UTV'}${prefs.getString('trackr_lite_machine_no') ?? '005H'}';
+    final mName = prefs.getString(_machineNameKey) ?? 'UTV005H';
     final div = prefs.getString(_divisionKey) ?? 'TVC';
-    final sec = prefs.getString(_sectionKey) ?? 'KTYM';
-    final rStation = prefs.getString(_readyStationKey) ?? 'CGY';
-    final sStation = prefs.getString(_stabledStationKey) ?? 'KTYM';
+    final sec = prefs.getString(_sectionKey) ?? '';
+    final rStation = prefs.getString(_readyStationKey) ?? '';
+    final sStation = prefs.getString(_stabledStationKey) ?? '';
 
     final fresh = ShiftLog(
       date: today,
-      machineName: mName.isNotEmpty ? mName : 'UTV005H',
+      machineName: mName,
       division: div,
       section: sec,
       readyStation: rStation,
-      readyTime: '09:25',
+      readyTime: '',
       stabledStation: sStation,
+      stabledTime: '',
       blocks: [],
     );
     await saveActiveShift(fresh);
     return fresh;
+  }
+
+  /// Clears all stored data (history, active shift, notes) for a clean slate
+  static Future<void> resetAllData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_activeShiftKey);
+    await prefs.remove(_historyKey);
+    await prefs.remove(_notesKey);
+    await prefs.remove(_readyStationKey);
+    await prefs.remove(_stabledStationKey);
   }
 
   static Future<void> saveActiveShift(ShiftLog log) async {
@@ -140,12 +150,7 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_notesKey);
     if (raw == null) {
-      // Default initial notes if empty
-      return const [
-        ReminderItem(id: 'r1', text: 'Check hydraulic oil & system pressure'),
-        ReminderItem(id: 'r2', text: 'Diesel refueling required at depot'),
-        ReminderItem(id: 'r3', text: 'Verify tines/clamp condition'),
-      ];
+      return const [];
     }
     try {
       final list = jsonDecode(raw) as List<dynamic>;

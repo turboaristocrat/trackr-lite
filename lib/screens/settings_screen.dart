@@ -152,6 +152,45 @@ class SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _handleResetAllData() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.cardBg,
+        title: const Text('Reset Everything to 0?'),
+        content: const Text(
+          'This will clear today\'s active shift, all block entries, completed history, and all notes/reminders.\n\nThe app will be set to a completely fresh clean slate for testing.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.redDanger),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Reset All to 0'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await StorageService.resetAllData();
+      await refreshSettings();
+      widget.onDataChanged?.call();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('All data has been reset to 0 (clean slate).'),
+            backgroundColor: AppTheme.railSafetyGreen,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -433,7 +472,7 @@ class SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 14),
 
-            // Secondary Quick Actions (Copy JSON / Paste JSON)
+            // Secondary Quick Actions (Copy JSON / Paste JSON / Reset Data)
             Row(
               children: [
                 Expanded(
@@ -460,6 +499,23 @@ class SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _handleResetAllData,
+                icon: const Icon(Icons.restart_alt_rounded, size: 15, color: AppTheme.redDanger),
+                label: const Text(
+                  'Reset All Data to Zero (Clean Slate)',
+                  style: TextStyle(fontSize: 12, color: AppTheme.redDanger, fontWeight: FontWeight.bold),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: AppTheme.redDanger.withValues(alpha: 0.4)),
+                  padding: const EdgeInsets.symmetric(vertical: 9),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
             ),
           ],
         ),
