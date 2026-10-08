@@ -99,47 +99,70 @@ class ReportService {
   // --- Telegram Primary Sharing ---
   static Future<void> shareToTelegram(ShiftLog log) async {
     final text = formatReport(log);
+
+    // Safeguard: Always copy formatted report to clipboard first so user never loses it
+    try {
+      await Clipboard.setData(ClipboardData(text: text));
+    } catch (_) {}
+
     final encoded = Uri.encodeComponent(text);
+    // https://t.me/share/url?url=&text=... is the official universal Telegram share link
+    // It works across iOS, Android, and Desktop (redirects to installed Telegram or Telegram Web)
+    final tgHttpsUrl = Uri.parse('https://t.me/share/url?url=&text=$encoded');
+    final tgNativeUri = Uri.parse('tg://msg?text=$encoded');
 
-    // Try native app scheme first
-    final tgNativeUrl = Uri.parse('tg://msg?text=$encoded');
+    // 1. Try launching the universal https://t.me link (works seamlessly on mobile & browser)
     try {
-      if (await canLaunchUrl(tgNativeUrl)) {
-        await launchUrl(tgNativeUrl, mode: LaunchMode.externalApplication);
-        return;
-      }
+      final launched = await launchUrl(
+        tgHttpsUrl,
+        mode: LaunchMode.externalApplication,
+        webOnlyWindowName: '_blank',
+      );
+      if (launched) return;
     } catch (_) {}
 
-    // Fallback to Telegram Web Share API
-    final tgWebUrl = Uri.parse('https://t.me/share/url?url=&text=$encoded');
+    // 2. Try native app scheme directly (for installed native apps)
     try {
-      if (await canLaunchUrl(tgWebUrl)) {
-        await launchUrl(tgWebUrl, mode: LaunchMode.externalApplication);
-        return;
-      }
+      final launched = await launchUrl(
+        tgNativeUri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (launched) return;
     } catch (_) {}
 
-    // Fallback to standard system share
-    // ignore: deprecated_member_use
-    await Share.share(text, subject: 'Progress of ${log.machineName} on ${log.date}');
+    // 3. Fallback to device system share sheet
+    try {
+      // ignore: deprecated_member_use
+      await Share.share(text, subject: 'Progress of ${log.machineName} on ${log.date}');
+    } catch (_) {}
   }
 
   // --- WhatsApp Secondary Sharing ---
   static Future<void> shareToWhatsApp(ShiftLog log) async {
     final text = formatReport(log);
+
+    // Safeguard: Always copy formatted report to clipboard
+    try {
+      await Clipboard.setData(ClipboardData(text: text));
+    } catch (_) {}
+
     final encoded = Uri.encodeComponent(text);
     final whatsappUrl = Uri.parse('https://wa.me/?text=$encoded');
 
     try {
-      if (await canLaunchUrl(whatsappUrl)) {
-        await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
-        return;
-      }
+      final launched = await launchUrl(
+        whatsappUrl,
+        mode: LaunchMode.externalApplication,
+        webOnlyWindowName: '_blank',
+      );
+      if (launched) return;
     } catch (_) {}
 
     // Fallback to standard system share
-    // ignore: deprecated_member_use
-    await Share.share(text, subject: 'Progress of ${log.machineName} on ${log.date}');
+    try {
+      // ignore: deprecated_member_use
+      await Share.share(text, subject: 'Progress of ${log.machineName} on ${log.date}');
+    } catch (_) {}
   }
 
   // --- Copy to Clipboard ---

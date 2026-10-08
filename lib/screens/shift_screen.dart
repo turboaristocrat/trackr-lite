@@ -855,7 +855,17 @@ class ShiftScreenState extends State<ShiftScreen> {
                   'Share to Telegram',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
                 ),
-                onPressed: () => ReportService.shareToTelegram(shift),
+                onPressed: () async {
+                  await ReportService.shareToTelegram(shift);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Opening Telegram (Report also copied to clipboard)'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                },
               ),
             ),
             const SizedBox(width: 8),
