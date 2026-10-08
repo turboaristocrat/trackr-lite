@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'screens/history_screen.dart';
 import 'screens/notes_screen.dart';
+import 'screens/settings_screen.dart';
 import 'screens/shift_screen.dart';
 import 'theme/app_theme.dart';
 import 'widgets/trackr_logo.dart';
@@ -34,8 +35,16 @@ class MainScaffold extends StatefulWidget {
 
 class _MainScaffoldState extends State<MainScaffold> {
   int _currentIndex = 0;
-  final GlobalKey<HistoryScreenState> _historyKey = GlobalKey<HistoryScreenState>();
+  final GlobalKey<ShiftScreenState> _shiftKey = GlobalKey<ShiftScreenState>();
   final GlobalKey<NotesScreenState> _notesKey = GlobalKey<NotesScreenState>();
+  final GlobalKey<HistoryScreenState> _historyKey = GlobalKey<HistoryScreenState>();
+  final GlobalKey<SettingsScreenState> _settingsKey = GlobalKey<SettingsScreenState>();
+
+  void _onDataChanged() {
+    _shiftKey.currentState?.refreshShift();
+    _notesKey.currentState?.refreshNotes();
+    _historyKey.currentState?.refreshHistory();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,6 +74,7 @@ class _MainScaffoldState extends State<MainScaffold> {
         index: _currentIndex,
         children: [
           ShiftScreen(
+            key: _shiftKey,
             onShiftCompleted: () {
               _historyKey.currentState?.refreshHistory();
               setState(() => _currentIndex = 2);
@@ -72,15 +82,23 @@ class _MainScaffoldState extends State<MainScaffold> {
           ),
           NotesScreen(key: _notesKey),
           HistoryScreen(key: _historyKey),
+          SettingsScreen(
+            key: _settingsKey,
+            onDataChanged: _onDataChanged,
+          ),
         ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (idx) {
-          if (idx == 1) {
+          if (idx == 0) {
+            _shiftKey.currentState?.refreshShift();
+          } else if (idx == 1) {
             _notesKey.currentState?.refreshNotes();
           } else if (idx == 2) {
             _historyKey.currentState?.refreshHistory();
+          } else if (idx == 3) {
+            _settingsKey.currentState?.refreshSettings();
           }
           setState(() => _currentIndex = idx);
         },
@@ -99,6 +117,11 @@ class _MainScaffoldState extends State<MainScaffold> {
             icon: Icon(Icons.history_rounded),
             selectedIcon: Icon(Icons.history_rounded),
             label: 'History',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings_rounded),
+            label: 'Settings',
           ),
         ],
       ),

@@ -5,6 +5,7 @@ class ReminderItem {
   final String? reminderDate; // YYYY-MM-DD
   final String? reminderTime; // HH:mm
   final String category; // 'Maintenance', 'Fuel', 'Caution', 'Inspection', 'Handover', 'General'
+  final List<String> tags;
   final bool isDone;
   final String createdAt;
 
@@ -16,6 +17,7 @@ class ReminderItem {
     this.reminderDate,
     this.reminderTime,
     this.category = 'General',
+    this.tags = const [],
     this.isDone = false,
     this.createdAt = '',
   }) : title = title ?? text ?? '';
@@ -44,6 +46,7 @@ class ReminderItem {
     'reminderDate': reminderDate,
     'reminderTime': reminderTime,
     'category': category,
+    'tags': tags,
     'isDone': isDone,
     'createdAt': createdAt,
   };
@@ -55,6 +58,7 @@ class ReminderItem {
     reminderDate: json['reminderDate'] as String?,
     reminderTime: json['reminderTime'] as String?,
     category: json['category'] as String? ?? 'General',
+    tags: (json['tags'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? const [],
     isDone: json['isDone'] as bool? ?? false,
     createdAt: json['createdAt'] as String? ?? '',
   );
@@ -66,6 +70,7 @@ class ReminderItem {
     String? reminderDate,
     String? reminderTime,
     String? category,
+    List<String>? tags,
     bool? isDone,
     String? createdAt,
   }) {
@@ -76,6 +81,7 @@ class ReminderItem {
       reminderDate: reminderDate ?? this.reminderDate,
       reminderTime: reminderTime ?? this.reminderTime,
       category: category ?? this.category,
+      tags: tags ?? this.tags,
       isDone: isDone ?? this.isDone,
       createdAt: createdAt ?? this.createdAt,
     );

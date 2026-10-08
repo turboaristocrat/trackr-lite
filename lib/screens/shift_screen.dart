@@ -17,20 +17,20 @@ class ShiftScreen extends StatefulWidget {
   const ShiftScreen({super.key, required this.onShiftCompleted});
 
   @override
-  State<ShiftScreen> createState() => _ShiftScreenState();
+  State<ShiftScreen> createState() => ShiftScreenState();
 }
 
-class _ShiftScreenState extends State<ShiftScreen> {
+class ShiftScreenState extends State<ShiftScreen> {
   ShiftLog? _shift;
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadShift();
+    refreshShift();
   }
 
-  Future<void> _loadShift() async {
+  Future<void> refreshShift() async {
     setState(() => _isLoading = true);
     final shift = await StorageService.getActiveShift();
     if (mounted) {
@@ -213,7 +213,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
       await ReportService.shareToTelegram(_shift!);
       await StorageService.completeAndArchiveShift(_shift!);
       widget.onShiftCompleted();
-      await _loadShift();
+      await refreshShift();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

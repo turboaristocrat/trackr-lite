@@ -15,39 +15,7 @@ class NotesScreenState extends State<NotesScreen> {
   List<ReminderItem> _notes = [];
   bool _isLoading = true;
   String _filter = 'All'; // 'All', 'Pending', 'Done'
-
-  final List<Map<String, String>> _quickTemplates = [
-    {
-      'title': 'Diesel Refueling',
-      'category': 'Fuel',
-      'details': 'Refuel fuel tank at depot/siding. Check fuel meter and fuel filter.',
-    },
-    {
-      'title': 'Check Hydraulic Oil',
-      'category': 'Maintenance',
-      'details': 'Inspect oil level glass, temperature gauge, and high pressure hoses.',
-    },
-    {
-      'title': 'Caution Order Noted',
-      'category': 'Caution',
-      'details': 'Speed restriction and work spot caution order details from Station Master.',
-    },
-    {
-      'title': 'Tools & Clamp Check',
-      'category': 'Inspection',
-      'details': 'Check rail clamps, lifting hooks, jacks, and safety locking pins.',
-    },
-    {
-      'title': 'Shift Handover Notes',
-      'category': 'Handover',
-      'details': 'Handover machine log, spare parts consumption, and stabling clearance.',
-    },
-    {
-      'title': 'OHE Power Block Clearance',
-      'category': 'Safety',
-      'details': 'Verify OHE grounding discharge rods attached before roof work.',
-    },
-  ];
+  String? _selectedTagFilter; // Filter by tag if selected
 
   @override
   void initState() {
@@ -71,14 +39,31 @@ class NotesScreenState extends State<NotesScreen> {
     await StorageService.saveNotes(updated);
   }
 
+  /// Collect all unique tags currently in use across notes
+  List<String> get _allTags {
+    final set = <String>{};
+    for (final note in _notes) {
+      for (final t in note.tags) {
+        if (t.trim().isNotEmpty) set.add(t.trim());
+      }
+    }
+    return set.toList()..sort();
+  }
+
   Future<void> _showAddOrEditNoteDialog({ReminderItem? existing}) async {
     final titleCtrl = TextEditingController(text: existing?.title ?? '');
     final detailsCtrl = TextEditingController(text: existing?.details ?? '');
+    final tagInputCtrl = TextEditingController();
+
     String selectedCat = existing?.category ?? 'General';
     String? remDate = existing?.reminderDate;
     String? remTime = existing?.reminderTime;
+    List<String> currentTags = List<String>.from(existing?.tags ?? []);
 
     final categories = ['General', 'Fuel', 'Maintenance', 'Caution', 'Inspection', 'Handover', 'Safety'];
+
+    // Suggested quick tags
+    final popularTags = ['Urgent', 'Engine', 'Hydraulic', 'Track', 'Siding', 'Depot', 'Material', 'Electrical'];
 
     final result = await showDialog<ReminderItem>(
       context: context,
@@ -131,6 +116,22 @@ class NotesScreenState extends State<NotesScreen> {
             }
           }
 
+          void addTag(String tag) {
+            final cleaned = tag.trim().replaceAll(',', '');
+            if (cleaned.isNotEmpty && !currentTags.contains(cleaned)) {
+              setModalState(() {
+                currentTags.add(cleaned);
+                tagInputCtrl.clear();
+              });
+            }
+          }
+
+          void removeTag(String tag) {
+            setModalState(() {
+              currentTags.remove(tag);
+            });
+          }
+
           return AlertDialog(
             backgroundColor: AppTheme.cardBg,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -150,7 +151,7 @@ class NotesScreenState extends State<NotesScreen> {
             ),
             content: SingleChildScrollView(
               child: SizedBox(
-                width: 420,
+                width: 440,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -198,6 +199,108 @@ class NotesScreenState extends State<NotesScreen> {
                         labelText: 'Details / Notes (Optional)',
                         hintText: 'Add specific notes, location, or instructions...',
                         prefixIcon: Icon(Icons.notes_rounded, size: 18),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Tags Input & Management
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.borderColor),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.label_outline_rounded, color: AppTheme.primary, size: 17),
+                              SizedBox(width: 6),
+                              Text(
+                                'Tags',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimary),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+
+                          // Active tags
+                          if (currentTags.isNotEmpty) ...[
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: currentTags.map((tag) {
+                                return Chip(
+                                  label: Text('#$tag', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
+                                  deleteIcon: const Icon(Icons.close_rounded, size: 14),
+                                  onDeleted: () => removeTag(tag),
+                                  backgroundColor: AppTheme.cardBg,
+                                  side: const BorderSide(color: AppTheme.borderColor),
+                                  visualDensity: VisualDensity.compact,
+                                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                                );
+                              }).toList(),
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+
+                          // Tag input field
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: tagInputCtrl,
+                                  decoration: const InputDecoration(
+                                    isDense: true,
+                                    hintText: 'Type tag and press Add...',
+                                    hintStyle: TextStyle(fontSize: 12),
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  ),
+                                  onSubmitted: (val) => addTag(val),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                                onPressed: () => addTag(tagInputCtrl.text),
+                                child: const Text('Add Tag', style: TextStyle(fontSize: 11.5)),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+
+                          // Suggested popular tags
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: popularTags.map((sug) {
+                                final alreadyAdded = currentTags.contains(sug);
+                                if (alreadyAdded) return const SizedBox.shrink();
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 5),
+                                  child: InkWell(
+                                    onTap: () => addTag(sug),
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.cardBg,
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: AppTheme.borderColor),
+                                      ),
+                                      child: Text('+$sug', style: const TextStyle(fontSize: 10.5, color: AppTheme.textSecondary)),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -330,6 +433,7 @@ class NotesScreenState extends State<NotesScreen> {
                     title: t,
                     details: detailsCtrl.text.trim(),
                     category: selectedCat,
+                    tags: currentTags,
                     reminderDate: remDate,
                     reminderTime: remTime,
                   );
@@ -374,17 +478,6 @@ class NotesScreenState extends State<NotesScreen> {
     );
   }
 
-  Future<void> _addFromTemplate(Map<String, String> tpl) async {
-    final item = ReminderItem(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      title: tpl['title'] ?? '',
-      details: tpl['details'] ?? '',
-      category: tpl['category'] ?? 'General',
-    );
-    final updated = List<ReminderItem>.from(_notes)..insert(0, item);
-    await _saveAll(updated);
-  }
-
   Future<void> _toggleNote(String id) async {
     final updated = _notes.map((n) {
       if (n.id == id) {
@@ -418,6 +511,13 @@ class NotesScreenState extends State<NotesScreen> {
     } else {
       filteredNotes = _notes;
     }
+
+    // Apply tag filter if active
+    if (_selectedTagFilter != null) {
+      filteredNotes = filteredNotes.where((n) => n.tags.contains(_selectedTagFilter)).toList();
+    }
+
+    final allTagsList = _allTags;
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -495,24 +595,53 @@ class NotesScreenState extends State<NotesScreen> {
                   ),
                 ),
 
-                // Quick Preset Chips (1-tap add common railway tasks)
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  child: Row(
-                    children: _quickTemplates.map((tpl) {
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 6),
-                        child: ActionChip(
-                          label: Text(tpl['title']!, style: const TextStyle(fontSize: 11.5)),
-                          backgroundColor: AppTheme.surfaceContainerLow,
-                          side: const BorderSide(color: AppTheme.borderColor, width: 0.8),
-                          onPressed: () => _addFromTemplate(tpl),
+                // Tags Filter Bar (if there are tags)
+                if (allTagsList.isNotEmpty)
+                  Container(
+                    height: 38,
+                    margin: const EdgeInsets.only(bottom: 4),
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: FilterChip(
+                            label: const Text('All Tags', style: TextStyle(fontSize: 11)),
+                            selected: _selectedTagFilter == null,
+                            onSelected: (_) => setState(() => _selectedTagFilter = null),
+                            visualDensity: VisualDensity.compact,
+                            backgroundColor: AppTheme.surfaceContainerLow,
+                            selectedColor: AppTheme.primary,
+                            labelStyle: TextStyle(
+                              color: _selectedTagFilter == null ? Colors.white : AppTheme.textPrimary,
+                              fontWeight: _selectedTagFilter == null ? FontWeight.bold : FontWeight.normal,
+                            ),
+                          ),
                         ),
-                      );
-                    }).toList(),
+                        ...allTagsList.map((tag) {
+                          final isSel = _selectedTagFilter == tag;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: FilterChip(
+                              label: Text('#$tag', style: const TextStyle(fontSize: 11)),
+                              selected: isSel,
+                              onSelected: (_) => setState(() {
+                                _selectedTagFilter = isSel ? null : tag;
+                              }),
+                              visualDensity: VisualDensity.compact,
+                              backgroundColor: AppTheme.surfaceContainerLow,
+                              selectedColor: AppTheme.primary,
+                              labelStyle: TextStyle(
+                                color: isSel ? Colors.white : AppTheme.textPrimary,
+                                fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+                              ),
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
                   ),
-                ),
 
                 // Notes List
                 Expanded(
@@ -554,7 +683,7 @@ class NotesScreenState extends State<NotesScreen> {
             ),
             const SizedBox(height: 6),
             const Text(
-              'Tap "+ Add Note / Reminder" to add notes, details, and reminder alarms.',
+              'Tap "+ Add Note / Reminder" to add notes, details, tags, and reminder alarms.',
               textAlign: TextAlign.center,
               style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.4),
             ),
@@ -669,6 +798,36 @@ class NotesScreenState extends State<NotesScreen> {
                       color: note.isDone ? AppTheme.textMuted : AppTheme.textSecondary,
                       height: 1.35,
                     ),
+                  ),
+                ),
+              ],
+
+              // Tags section (if present)
+              if (note.tags.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.only(left: 30),
+                  child: Wrap(
+                    spacing: 5,
+                    runSpacing: 4,
+                    children: note.tags.map((tag) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(color: AppTheme.borderColor),
+                        ),
+                        child: Text(
+                          '#$tag',
+                          style: const TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                      );
+                    }).toList(),
                   ),
                 ),
               ],
