@@ -37,7 +37,7 @@ class AppTheme {
   static const Color textMuted = Color(0xFF75777B);
   static const Color outline = Color(0xFF75777B);
   static const Color outlineVariant = Color(0xFFC5C6CB);
-  static const Color borderColor = Color(0xFFE2E5EA);
+  static const Color borderColor = Color(0xFFEAEDF2); // Subtle, airy contour
 
   // Messaging platforms
   static const Color telegramBlue = Color(0xFF0088CC);
@@ -75,7 +75,7 @@ class AppTheme {
         color: surfaceContainerLowest,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
           side: const BorderSide(
             color: borderColor,
             width: 1,

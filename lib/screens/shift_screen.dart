@@ -249,26 +249,35 @@ class ShiftScreenState extends State<ShiftScreen> {
       children: [
         // ================= TOP HEADER CARD =================
         Container(
-          margin: const EdgeInsets.fromLTRB(16, 10, 16, 6),
-          padding: const EdgeInsets.all(14),
+          margin: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             color: AppTheme.cardBg,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(color: AppTheme.borderColor),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Top Row: Date Chip, Machine Badge, Large Report Button
               Row(
                 children: [
                   // Date Chip
                   InkWell(
                     onTap: _pickDate,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(10),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
                       decoration: BoxDecoration(
                         color: AppTheme.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: AppTheme.borderColor),
                       ),
                       child: Row(
@@ -276,7 +285,7 @@ class ShiftScreenState extends State<ShiftScreen> {
                         children: [
                           const Icon(Icons.calendar_today_rounded, size: 14, color: AppTheme.primary),
                           const SizedBox(width: 6),
-                          Text(displayDate, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          Text(displayDate, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                         ],
                       ),
                     ),
@@ -286,19 +295,19 @@ class ShiftScreenState extends State<ShiftScreen> {
                   // Machine Badge
                   InkWell(
                     onTap: _editSetup,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(10),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
                       decoration: BoxDecoration(
-                        color: AppTheme.primary.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
+                        color: AppTheme.primary.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.15)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           const Icon(Icons.train_rounded, size: 15, color: AppTheme.primary),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 5),
                           Text(
                             shift.machineName,
                             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.primary),
@@ -308,11 +317,13 @@ class ShiftScreenState extends State<ShiftScreen> {
                     ),
                   ),
                   const Spacer(),
+
+                  // Big Report Button
                   InkWell(
                     onTap: _previewReport,
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                       decoration: BoxDecoration(
                         color: AppTheme.surfaceContainerLow,
                         borderRadius: BorderRadius.circular(10),
@@ -321,8 +332,8 @@ class ShiftScreenState extends State<ShiftScreen> {
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.description_outlined, size: 17, color: AppTheme.primary),
-                          SizedBox(width: 5),
+                          Icon(Icons.description_outlined, size: 16, color: AppTheme.primary),
+                          SizedBox(width: 6),
                           Text(
                             'Report',
                             style: TextStyle(
@@ -337,7 +348,7 @@ class ShiftScreenState extends State<ShiftScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
 
               // Division & Section with Station Details
               InkWell(
@@ -347,11 +358,13 @@ class ShiftScreenState extends State<ShiftScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 2.0),
                   child: Row(
                     children: [
+                      const Icon(Icons.location_on_outlined, size: 16, color: AppTheme.textSecondary),
+                      const SizedBox(width: 6),
                       Flexible(
                         child: Text(
                           hasStationDetail
-                              ? '📍 ${shift.division} / ${shift.section} ($stationDetail)'
-                              : '📍 Division: ${shift.division}   •   Section: ${shift.section}',
+                              ? '${shift.division} / ${shift.section} ($stationDetail)'
+                              : 'Division: ${shift.division}   •   Section: ${shift.section}',
                           style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppTheme.textPrimary),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -365,20 +378,20 @@ class ShiftScreenState extends State<ShiftScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 14),
 
-              // KPI bar
+              // KPI bar (Spacious and breathable)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
                   color: AppTheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     _buildKpi('${shift.blockCount}', 'Blocks', Icons.layers_rounded, AppTheme.primary),
-                    Container(width: 1, height: 18, color: AppTheme.borderColor),
+                    Container(width: 1, height: 22, color: AppTheme.borderColor),
                     _buildKpi(
                       shift.totalBlockOutput > 0
                           ? (shift.totalBlockOutput.truncateToDouble() == shift.totalBlockOutput
@@ -389,12 +402,12 @@ class ShiftScreenState extends State<ShiftScreen> {
                       Icons.trending_up_rounded,
                       AppTheme.secondary,
                     ),
-                    Container(width: 1, height: 18, color: AppTheme.borderColor),
+                    Container(width: 1, height: 22, color: AppTheme.borderColor),
                     _buildKpi(
                       shift.totalTransitKm > 0 ? '${shift.totalTransitKm}k' : '0k',
                       'Transit',
                       Icons.navigation_rounded,
-                      AppTheme.amberAccent,
+                      AppTheme.secondary,
                     ),
                   ],
                 ),
@@ -405,30 +418,37 @@ class ShiftScreenState extends State<ShiftScreen> {
 
         // ================= DEDICATED MACHINE READY SECTION =================
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: InkWell(
             onTap: _editMachineReady,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
                 color: AppTheme.cardBg,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: shift.readyStation.isNotEmpty ? AppTheme.railSafetyGreen.withValues(alpha: 0.5) : AppTheme.borderColor,
+                  color: shift.readyStation.isNotEmpty ? AppTheme.railSafetyGreen.withValues(alpha: 0.35) : AppTheme.borderColor,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.015),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(5),
+                    padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: AppTheme.railSafetyGreen.withValues(alpha: 0.12),
+                      color: AppTheme.railSafetyGreen.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.check_circle_outline_rounded, color: AppTheme.railSafetyGreen, size: 16),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       shift.readyStation.isNotEmpty && shift.readyTime.isNotEmpty
@@ -438,7 +458,7 @@ class ShiftScreenState extends State<ShiftScreen> {
                               : 'Machine Ready: Tap to set station & time'),
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        fontSize: 12.5,
+                        fontSize: 13,
                         color: shift.readyStation.isNotEmpty ? AppTheme.textPrimary : AppTheme.textMuted,
                       ),
                     ),
@@ -452,22 +472,35 @@ class ShiftScreenState extends State<ShiftScreen> {
 
         // Action Buttons (+ Log Block / + Transit)
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             children: [
               Expanded(
                 child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                   onPressed: () => _addOrEditBlock(isTransit: false),
-                  icon: const Icon(Icons.add_rounded, size: 19),
-                  label: const Text('Log Block'),
+                  icon: const Icon(Icons.add_rounded, size: 18),
+                  label: const Text('Log Block', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.textPrimary,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    side: const BorderSide(color: AppTheme.borderColor),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                   onPressed: () => _addOrEditBlock(isTransit: true),
                   icon: const Icon(Icons.directions_railway_rounded, size: 18, color: AppTheme.secondary),
-                  label: const Text('Log Transit'),
+                  label: const Text('Log Transit', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
                 ),
               ),
             ],
@@ -501,30 +534,37 @@ class ShiftScreenState extends State<ShiftScreen> {
 
   Widget _buildMachineStabledCard(ShiftLog shift) {
     return Container(
-      margin: const EdgeInsets.only(top: 4, bottom: 12),
+      margin: const EdgeInsets.only(top: 8, bottom: 16),
       child: InkWell(
         onTap: _editMachineStabled,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             color: AppTheme.cardBg,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: shift.stabledStation.isNotEmpty ? AppTheme.amberAccent.withValues(alpha: 0.6) : AppTheme.borderColor,
+              color: shift.stabledStation.isNotEmpty ? AppTheme.amberAccent.withValues(alpha: 0.5) : AppTheme.borderColor,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.015),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(5),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: AppTheme.amberAccent.withValues(alpha: 0.15),
+                  color: AppTheme.amberAccent.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.flag_circle_outlined, color: AppTheme.amberAccent, size: 16),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   shift.stabledStation.isNotEmpty
@@ -534,7 +574,7 @@ class ShiftScreenState extends State<ShiftScreen> {
                       : 'Machine Stabled: Tap to set station at end of shift',
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
-                    fontSize: 12.5,
+                    fontSize: 13,
                     color: shift.stabledStation.isNotEmpty ? AppTheme.textPrimary : AppTheme.textMuted,
                   ),
                 ),
@@ -550,13 +590,14 @@ class ShiftScreenState extends State<ShiftScreen> {
   Widget _buildKpi(String value, String label, IconData icon, Color color) {
     return Row(
       children: [
-        Icon(icon, size: 15, color: color),
-        const SizedBox(width: 5),
+        Icon(icon, size: 16, color: color),
+        const SizedBox(width: 6),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: color)),
+            Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: color)),
+            const SizedBox(height: 1),
             Text(label, style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary)),
           ],
         ),
@@ -600,10 +641,22 @@ class ShiftScreenState extends State<ShiftScreen> {
     final isTransit = b.isTransit;
     final color = isTransit ? AppTheme.secondary : AppTheme.primary;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: AppTheme.cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.015),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(15),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -611,12 +664,12 @@ class ShiftScreenState extends State<ShiftScreen> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                   decoration: BoxDecoration(
-                    color: isTransit ? AppTheme.amberAccent.withValues(alpha: 0.15) : AppTheme.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(6),
+                    color: isTransit ? AppTheme.amberAccent.withValues(alpha: 0.12) : AppTheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(7),
                     border: Border.all(
-                      color: isTransit ? AppTheme.amberAccent.withValues(alpha: 0.4) : AppTheme.borderColor,
+                      color: isTransit ? AppTheme.amberAccent.withValues(alpha: 0.35) : AppTheme.borderColor,
                     ),
                   ),
                   child: Text(
@@ -624,11 +677,11 @@ class ShiftScreenState extends State<ShiftScreen> {
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 11.5,
-                      color: isTransit ? AppTheme.amberAccent : AppTheme.textPrimary,
+                      color: isTransit ? AppTheme.secondary : AppTheme.textPrimary,
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 9),
                 Text(
                   isTransit
                       ? '${b.startTime} – ${b.endTime} hrs'
@@ -648,30 +701,30 @@ class ShiftScreenState extends State<ShiftScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
 
             // Section & Line
             Text(
               isTransit
                   ? '${b.stationFrom} – ${b.stationTo}'
                   : '${b.stationFrom} – ${b.stationTo} (${b.line})',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textPrimary),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5, color: AppTheme.textPrimary),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
 
             // Output items chips/pills
             Wrap(
-              spacing: 6,
-              runSpacing: 5,
+              spacing: 8,
+              runSpacing: 6,
               children: isTransit
                   ? [
                       if (b.output > 0)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.08),
+                            color: color.withValues(alpha: 0.06),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: color.withValues(alpha: 0.2)),
+                            border: Border.all(color: color.withValues(alpha: 0.18)),
                           ),
                           child: Text(
                             'Run: ${b.output} Km',
@@ -684,11 +737,11 @@ class ShiftScreenState extends State<ShiftScreen> {
                           ? item.output.toInt().toString()
                           : item.output.toString();
                       return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.08),
+                          color: color.withValues(alpha: 0.06),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: color.withValues(alpha: 0.2)),
+                          border: Border.all(color: color.withValues(alpha: 0.18)),
                         ),
                         child: Text(
                           '${item.activity}: $outStr ${item.outputUnit}',
@@ -699,7 +752,7 @@ class ShiftScreenState extends State<ShiftScreen> {
             ),
 
             if (b.remarks.isNotEmpty) ...[
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               Text(
                 'Remarks: ${b.remarks}',
                 style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontStyle: FontStyle.italic),
