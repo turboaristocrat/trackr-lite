@@ -3,7 +3,6 @@ import 'package:intl/intl.dart';
 import '../models/block_entry.dart';
 import '../models/shift_log.dart';
 import '../services/report_service.dart';
-import '../services/station_service.dart';
 import '../services/storage_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/add_block_dialog.dart';
@@ -238,9 +237,6 @@ class ShiftScreenState extends State<ShiftScreen> {
       displayDate = shift.date;
     }
 
-    final stationDetail = StationService.getStationName(shift.section);
-    final hasStationDetail = stationDetail.isNotEmpty && stationDetail.toUpperCase() != shift.section.toUpperCase();
-
     int blockCounter = 1;
 
     return Column(
@@ -360,9 +356,9 @@ class ShiftScreenState extends State<ShiftScreen> {
                       const SizedBox(width: 6),
                       Flexible(
                         child: Text(
-                          hasStationDetail
-                              ? '${shift.division} / ${shift.section} ($stationDetail)'
-                              : 'Division: ${shift.division}   •   Section: ${shift.section}',
+                          shift.section.isNotEmpty
+                              ? '${shift.division} / ${shift.section}'
+                              : 'Division: ${shift.division}',
                           style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppTheme.textPrimary),
                           overflow: TextOverflow.ellipsis,
                         ),
