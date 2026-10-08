@@ -23,17 +23,16 @@ void main() {
 
   group('ReportService', () {
     test('Matches official Southern Railway UTV format exactly', () {
-      final log = ShiftLog(
+      const log = ShiftLog(
         date: '2026-09-12',
-        machineType: 'UTV',
-        machineNo: '005H',
+        machineName: 'UTV005H',
         division: 'TVC',
         section: 'KTYM',
         readyStation: 'CGY',
         readyTime: '09:25',
         stabledStation: 'KTYM',
         blocks: [
-          const BlockEntry(
+          BlockEntry(
             id: 'b1',
             startTime: '10:35',
             endTime: '11:20',
@@ -44,7 +43,7 @@ void main() {
             output: 16,
             outputUnit: 'Nos',
           ),
-          const BlockEntry(
+          BlockEntry(
             id: 'b2',
             startTime: '12:05',
             endTime: '13:30',
@@ -55,7 +54,7 @@ void main() {
             output: 64,
             outputUnit: 'Nos',
           ),
-          const BlockEntry(
+          BlockEntry(
             id: 'b3',
             startTime: '14:55',
             endTime: '15:50',
@@ -66,7 +65,7 @@ void main() {
             output: 24,
             outputUnit: 'Nos',
           ),
-          const BlockEntry(
+          BlockEntry(
             id: 'b4',
             startTime: '16:38',
             endTime: '16:53',
@@ -101,11 +100,10 @@ void main() {
   group('StorageService', () {
     test('Saves and retrieves active shift and history', () async {
       final initial = await StorageService.getActiveShift();
-      expect(initial.machineType, 'UTV');
+      expect(initial.machineName, 'UTV005H');
 
       final updated = initial.copyWith(
-        machineType: 'DUOMAT',
-        machineNo: '814',
+        machineName: 'DUOMAT 814',
         blocks: [
           const BlockEntry(
             id: 't1',
@@ -121,15 +119,14 @@ void main() {
 
       await StorageService.saveActiveShift(updated);
       final fetched = await StorageService.getActiveShift();
-      expect(fetched.machineType, 'DUOMAT');
-      expect(fetched.machineNo, '814');
+      expect(fetched.machineName, 'DUOMAT 814');
       expect(fetched.blocks.length, 1);
 
       // Complete & Archive
       await StorageService.completeAndArchiveShift(updated);
       final history = await StorageService.getHistory();
       expect(history.length, 1);
-      expect(history.first.machineType, 'DUOMAT');
+      expect(history.first.machineName, 'DUOMAT 814');
     });
 
     test('Export and import backup JSON', () async {

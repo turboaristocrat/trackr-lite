@@ -2,10 +2,9 @@ import 'block_entry.dart';
 
 class ShiftLog {
   final String date; // YYYY-MM-DD
-  final String machineType;
-  final String machineNo;
-  final String division;
-  final String section;
+  final String machineName; // e.g. 'UTV005H' or 'CSM 952'
+  final String division; // e.g. 'TVC'
+  final String section; // e.g. 'KTYM'
   final String readyStation;
   final String readyTime;
   final String stabledStation;
@@ -14,8 +13,7 @@ class ShiftLog {
 
   const ShiftLog({
     required this.date,
-    required this.machineType,
-    required this.machineNo,
+    required this.machineName,
     required this.division,
     required this.section,
     this.readyStation = '',
@@ -24,6 +22,10 @@ class ShiftLog {
     this.stabledTime = '',
     required this.blocks,
   });
+
+  // Backward compatibility getters
+  String get machineType => machineName;
+  String get machineNo => '';
 
   double get totalBlockOutput => blocks
       .where((b) => !b.isTransit)
@@ -50,8 +52,7 @@ class ShiftLog {
 
   Map<String, dynamic> toJson() => {
     'date': date,
-    'machineType': machineType,
-    'machineNo': machineNo,
+    'machineName': machineName,
     'division': division,
     'section': section,
     'readyStation': readyStation,
@@ -61,26 +62,32 @@ class ShiftLog {
     'blocks': blocks.map((b) => b.toJson()).toList(),
   };
 
-  factory ShiftLog.fromJson(Map<String, dynamic> json) => ShiftLog(
-    date: json['date'] as String? ?? '',
-    machineType: json['machineType'] as String? ?? 'UTV',
-    machineNo: json['machineNo'] as String? ?? '005H',
-    division: json['division'] as String? ?? 'TVC',
-    section: json['section'] as String? ?? 'KTYM',
-    readyStation: json['readyStation'] as String? ?? '',
-    readyTime: json['readyTime'] as String? ?? '',
-    stabledStation: json['stabledStation'] as String? ?? '',
-    stabledTime: json['stabledTime'] as String? ?? '',
-    blocks: (json['blocks'] as List<dynamic>?)
-            ?.map((e) => BlockEntry.fromJson(e as Map<String, dynamic>))
-            .toList() ??
-        [],
-  );
+  factory ShiftLog.fromJson(Map<String, dynamic> json) {
+    String mName = json['machineName'] as String? ?? '';
+    if (mName.isEmpty) {
+      final t = json['machineType'] as String? ?? 'UTV';
+      final n = json['machineNo'] as String? ?? '005H';
+      mName = '$t$n'.trim();
+    }
+    return ShiftLog(
+      date: json['date'] as String? ?? '',
+      machineName: mName.isNotEmpty ? mName : 'UTV005H',
+      division: json['division'] as String? ?? 'TVC',
+      section: json['section'] as String? ?? 'KTYM',
+      readyStation: json['readyStation'] as String? ?? '',
+      readyTime: json['readyTime'] as String? ?? '',
+      stabledStation: json['stabledStation'] as String? ?? '',
+      stabledTime: json['stabledTime'] as String? ?? '',
+      blocks: (json['blocks'] as List<dynamic>?)
+              ?.map((e) => BlockEntry.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+    );
+  }
 
   ShiftLog copyWith({
     String? date,
-    String? machineType,
-    String? machineNo,
+    String? machineName,
     String? division,
     String? section,
     String? readyStation,
@@ -91,8 +98,7 @@ class ShiftLog {
   }) {
     return ShiftLog(
       date: date ?? this.date,
-      machineType: machineType ?? this.machineType,
-      machineNo: machineNo ?? this.machineNo,
+      machineName: machineName ?? this.machineName,
       division: division ?? this.division,
       section: section ?? this.section,
       readyStation: readyStation ?? this.readyStation,

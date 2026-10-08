@@ -39,7 +39,7 @@ class HistoryScreenState extends State<HistoryScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: AppTheme.cardBg,
         title: const Text('Delete Shift Log?'),
         content: Text('Are you sure you want to delete the log for $date? This cannot be undone.'),
         actions: [
@@ -67,12 +67,12 @@ class HistoryScreenState extends State<HistoryScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: AppTheme.cardBg,
         title: Row(
           children: [
             const Icon(Icons.description_rounded, color: AppTheme.primary, size: 22),
             const SizedBox(width: 8),
-            Text('Report: ${log.date}', style: const TextStyle(fontSize: 16)),
+            Text('Report: ${log.date}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ],
         ),
         content: SingleChildScrollView(
@@ -95,12 +95,12 @@ class HistoryScreenState extends State<HistoryScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18, color: Color(0xFF25D366)),
+            icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18, color: AppTheme.whatsAppGreen),
             tooltip: 'WhatsApp',
             onPressed: () => ReportService.shareToWhatsApp(log),
           ),
           ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0088CC)),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.telegramBlue),
             icon: const Icon(Icons.send_rounded, size: 16, color: Colors.white),
             label: const Text('Telegram', style: TextStyle(color: Colors.white)),
             onPressed: () => ReportService.shareToTelegram(log),
@@ -121,7 +121,7 @@ class HistoryScreenState extends State<HistoryScreen> {
     final success = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: AppTheme.cardBg,
         title: const Text('Import Backup JSON'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -161,7 +161,7 @@ class HistoryScreenState extends State<HistoryScreen> {
       await refreshHistory();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Backup restored successfully!'), backgroundColor: AppTheme.primary),
+          const SnackBar(content: Text('Backup restored successfully!'), backgroundColor: AppTheme.railSafetyGreen),
         );
       }
     } else if (success == false) {
@@ -176,6 +176,7 @@ class HistoryScreenState extends State<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
         title: const Text('Shift History'),
         actions: [
@@ -215,16 +216,16 @@ class HistoryScreenState extends State<HistoryScreen> {
           children: [
             Container(
               padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceVariant.withValues(alpha: 0.3),
+              decoration: const BoxDecoration(
+                color: AppTheme.surfaceContainerLow,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.history_rounded, size: 42, color: AppTheme.textSecondary),
+              child: const Icon(Icons.history_rounded, size: 42, color: AppTheme.textMuted),
             ),
             const SizedBox(height: 14),
             const Text(
               'No past shifts recorded yet',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary),
             ),
             const SizedBox(height: 6),
             const Text(
@@ -251,7 +252,7 @@ class HistoryScreenState extends State<HistoryScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         onTap: () => _showReportDialog(log),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(
@@ -263,28 +264,29 @@ class HistoryScreenState extends State<HistoryScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppTheme.surfaceVariant,
+                      color: AppTheme.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: AppTheme.borderColor),
                     ),
                     child: Text(
                       displayDate,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: AppTheme.textPrimary),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    '${log.machineType} ${log.machineNo}',
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary, fontSize: 13),
+                    log.machineName,
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary, fontSize: 13.5),
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.send_rounded, size: 18, color: Color(0xFF0088CC)),
+                    icon: const Icon(Icons.send_rounded, size: 18, color: AppTheme.telegramBlue),
                     visualDensity: VisualDensity.compact,
                     tooltip: 'Share to Telegram',
                     onPressed: () => ReportService.shareToTelegram(log),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18, color: Color(0xFF25D366)),
+                    icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18, color: AppTheme.whatsAppGreen),
                     visualDensity: VisualDensity.compact,
                     tooltip: 'Share to WhatsApp',
                     onPressed: () => ReportService.shareToWhatsApp(log),
@@ -314,7 +316,7 @@ class HistoryScreenState extends State<HistoryScreen> {
                     _buildMetricPill('${log.totalTransitKm} Km Run', AppTheme.amberAccent),
                   ],
                   const Spacer(),
-                  const Text('Tap to view ➔', style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+                  const Text('Tap to view ➔', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
                 ],
               ),
             ],
@@ -328,8 +330,9 @@ class HistoryScreenState extends State<HistoryScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
       child: Text(text, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color)),
     );

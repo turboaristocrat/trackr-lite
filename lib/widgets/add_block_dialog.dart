@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/block_entry.dart';
-import '../services/station_service.dart';
 import '../theme/app_theme.dart';
+import 'station_autocomplete_field.dart';
 
 class AddBlockDialog extends StatefulWidget {
   final BlockEntry? initialEntry;
@@ -21,7 +21,7 @@ class AddBlockDialog extends StatefulWidget {
     return showModalBottomSheet<BlockEntry>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: AppTheme.cardBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -64,18 +64,9 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
   final List<String> _railActions = [
     'unloaded',
     'loaded',
-    'packed',
-    'erected',
-    'renewed',
   ];
 
-  final List<String> _quickRemarks = [
-    'Tamping done',
-    'Caution order',
-    'Traffic burst',
-    'Point packing',
-    'No traffic delay',
-  ];
+  final List<String> _lineOptions = ['UP', 'DN', 'Both', 'SL', 'Yard'];
 
   @override
   void initState() {
@@ -98,7 +89,23 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
     );
     _remarksCtrl = TextEditingController(text: e?.remarks ?? '');
     _line = e?.line ?? 'UP';
+    if (!_lineOptions.contains(_line)) {
+      _line = 'UP';
+    }
     _unit = e?.outputUnit ?? (_isTransit ? 'Km' : 'Nos');
+
+    // Try to match activity if editing
+    if (e != null && !e.isTransit && e.activity.isNotEmpty) {
+      final parts = e.activity.split(' ');
+      if (parts.length >= 2) {
+        final act = parts.last;
+        final item = parts.sublist(0, parts.length - 1).join(' ');
+        if (!_railItems.contains(item)) _railItems.add(item);
+        if (!_railActions.contains(act)) _railActions.add(act);
+        _selectedItem = item;
+        _selectedAction = act;
+      }
+    }
   }
 
   @override
@@ -119,15 +126,97 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
     });
   }
 
+  Future<void> _addCustomWorkItem() async {
+    final ctrl = TextEditingController();
+    final item = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Add Custom Work Item'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Work Item Name',
+            hintText: 'e.g. Check Rails, Glued Joints',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final val = ctrl.text.trim();
+              if (val.isNotEmpty) Navigator.pop(ctx, val);
+            },
+            child: const Text('Add Item'),
+          ),
+        ],
+      ),
+    );
+
+    if (item != null && item.isNotEmpty) {
+      setState(() {
+        if (!_railItems.contains(item)) {
+          _railItems.add(item);
+        }
+        _selectedItem = item;
+        _updateActivityText();
+      });
+    }
+  }
+
+  Future<void> _addCustomAction() async {
+    final ctrl = TextEditingController();
+    final action = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Add Custom Action'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Action Name',
+            hintText: 'e.g. replaced, dismantled, shifted',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final val = ctrl.text.trim();
+              if (val.isNotEmpty) Navigator.pop(ctx, val);
+            },
+            child: const Text('Add Action'),
+          ),
+        ],
+      ),
+    );
+
+    if (action != null && action.isNotEmpty) {
+      setState(() {
+        if (!_railActions.contains(action)) {
+          _railActions.add(action);
+        }
+        _selectedAction = action;
+        _updateActivityText();
+      });
+    }
+  }
+
   Future<void> _pickTime(TextEditingController ctrl) async {
     final picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.dark(
+          colorScheme: const ColorScheme.light(
             primary: AppTheme.primary,
-            surface: AppTheme.surface,
+            surface: AppTheme.cardBg,
           ),
         ),
         child: child!,
@@ -175,20 +264,20 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomInset),
+      padding: EdgeInsets.fromLTRB(16, 14, 16, 16 + bottomInset),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Drag handle & Title
+            // Drag handle & Header
             Center(
               child: Container(
                 width: 36,
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(
-                  color: AppTheme.outline,
+                  color: AppTheme.borderColor,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -198,19 +287,24 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
                 Icon(
                   _isTransit ? Icons.directions_railway_rounded : Icons.build_circle_rounded,
                   color: _isTransit ? AppTheme.amberAccent : AppTheme.primary,
+                  size: 22,
                 ),
                 const SizedBox(width: 8),
                 Text(
                   widget.initialEntry != null
                       ? 'Edit Entry'
                       : (_isTransit ? 'Log Movement / Transit' : 'Log Track Block'),
-                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
+                  ),
                 ),
                 const Spacer(),
                 SegmentedButton<bool>(
                   segments: const [
-                    ButtonSegment(value: false, label: Text('Block', style: TextStyle(fontSize: 11.5))),
-                    ButtonSegment(value: true, label: Text('Transit', style: TextStyle(fontSize: 11.5))),
+                    ButtonSegment(value: false, label: Text('Block', style: TextStyle(fontSize: 12))),
+                    ButtonSegment(value: true, label: Text('Transit', style: TextStyle(fontSize: 12))),
                   ],
                   selected: {_isTransit},
                   onSelectionChanged: (set) {
@@ -234,7 +328,7 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
                 Expanded(
                   child: InkWell(
                     onTap: () => _pickTime(_startCtrl),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                     child: IgnorePointer(
                       child: TextField(
                         controller: _startCtrl,
@@ -250,7 +344,7 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
                 Expanded(
                   child: InkWell(
                     onTap: () => _pickTime(_endCtrl),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                     child: IgnorePointer(
                       child: TextField(
                         controller: _endCtrl,
@@ -266,29 +360,15 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
             ),
             const SizedBox(height: 12),
 
-            // Station From and To
+            // Station From and To with Station Name & Code while typing
             Row(
               children: [
                 Expanded(
-                  child: Autocomplete<String>(
-                    initialValue: TextEditingValue(text: _fromCtrl.text),
-                    optionsBuilder: (textEditingValue) {
-                      if (textEditingValue.text.isEmpty) return const [];
-                      return StationService.search(textEditingValue.text).map((s) => s.code);
-                    },
-                    onSelected: (selection) => _fromCtrl.text = selection,
-                    fieldViewBuilder: (ctx, ctrl, focus, onSub) {
-                      _fromCtrl = ctrl;
-                      return TextField(
-                        controller: ctrl,
-                        focusNode: focus,
-                        textCapitalization: TextCapitalization.characters,
-                        decoration: const InputDecoration(
-                          labelText: 'From Station',
-                          hintText: 'e.g. CGY',
-                        ),
-                      );
-                    },
+                  child: StationAutocompleteField(
+                    controller: _fromCtrl,
+                    label: 'From Station',
+                    hintText: 'e.g. CGY',
+                    prefixIcon: const Icon(Icons.location_on_outlined, size: 18),
                   ),
                 ),
                 const Padding(
@@ -296,111 +376,132 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
                   child: Icon(Icons.arrow_forward_rounded, color: AppTheme.textSecondary, size: 18),
                 ),
                 Expanded(
-                  child: Autocomplete<String>(
-                    initialValue: TextEditingValue(text: _toCtrl.text),
-                    optionsBuilder: (textEditingValue) {
-                      if (textEditingValue.text.isEmpty) return const [];
-                      return StationService.search(textEditingValue.text).map((s) => s.code);
-                    },
-                    onSelected: (selection) => _toCtrl.text = selection,
-                    fieldViewBuilder: (ctx, ctrl, focus, onSub) {
-                      _toCtrl = ctrl;
-                      return TextField(
-                        controller: ctrl,
-                        focusNode: focus,
-                        textCapitalization: TextCapitalization.characters,
-                        decoration: const InputDecoration(
-                          labelText: 'To Station',
-                          hintText: 'e.g. CGV',
-                        ),
-                      );
-                    },
+                  child: StationAutocompleteField(
+                    controller: _toCtrl,
+                    label: 'To Station',
+                    hintText: 'e.g. CGV',
+                    prefixIcon: const Icon(Icons.pin_drop_outlined, size: 18),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
 
-            // Track Line (Block only)
+            // Track Line (Block only): UP, DN, Both, SL, Yard
             if (!_isTransit) ...[
               Row(
                 children: [
-                  const Text('Line: ', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                  const Text('Line: ', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
                   const SizedBox(width: 8),
                   Wrap(
                     spacing: 6,
-                    children: ['UP', 'DN', 'SL', 'Yard'].map((l) {
+                    children: _lineOptions.map((l) {
                       final sel = _line == l;
                       return ChoiceChip(
-                        label: Text(l, style: TextStyle(fontSize: 12, fontWeight: sel ? FontWeight.bold : FontWeight.normal)),
+                        label: Text(
+                          l,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: sel ? FontWeight.bold : FontWeight.w500,
+                            color: sel ? Colors.white : AppTheme.textPrimary,
+                          ),
+                        ),
                         selected: sel,
-                        selectedColor: AppTheme.primary.withValues(alpha: 0.3),
+                        selectedColor: AppTheme.primary,
+                        backgroundColor: AppTheme.surfaceContainerLow,
                         onSelected: (_) => setState(() => _line = l),
                       );
                     }).toList(),
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
 
-              // Item Chips (Rails, Sleepers, P&C Sleepers, etc.)
-              const Text('Work Item:', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 6),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: _railItems.map((item) {
-                    final sel = _selectedItem == item;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 6),
-                      child: FilterChip(
-                        label: Text(item, style: TextStyle(fontSize: 12, fontWeight: sel ? FontWeight.bold : FontWeight.normal)),
-                        selected: sel,
-                        selectedColor: AppTheme.secondary.withValues(alpha: 0.25),
-                        onSelected: (val) {
-                          if (val) {
-                            setState(() {
-                              _selectedItem = item;
-                              _updateActivityText();
-                            });
-                          }
-                        },
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              // Action Chips (unloaded, loaded, packed, etc.)
+              // Work Items Dropdown & Actions Dropdown
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Action: ', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-                  const SizedBox(width: 6),
-                  Wrap(
-                    spacing: 6,
-                    children: _railActions.map((action) {
-                      final sel = _selectedAction == action;
-                      return ChoiceChip(
-                        label: Text(action, style: TextStyle(fontSize: 11.5, fontWeight: sel ? FontWeight.bold : FontWeight.normal)),
-                        selected: sel,
-                        selectedColor: AppTheme.amberAccent.withValues(alpha: 0.25),
-                        onSelected: (val) {
-                          if (val) {
-                            setState(() {
-                              _selectedAction = action;
-                              _updateActivityText();
-                            });
-                          }
-                        },
-                      );
-                    }).toList(),
+                  // Work Item Dropdown + Add Custom Option
+                  Expanded(
+                    flex: 3,
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _railItems.contains(_selectedItem) ? _selectedItem : _railItems.first,
+                      decoration: const InputDecoration(
+                        labelText: 'Work Item',
+                        prefixIcon: Icon(Icons.inventory_2_outlined, size: 18),
+                      ),
+                      isExpanded: true,
+                      items: [
+                        ..._railItems.map(
+                          (item) => DropdownMenuItem(value: item, child: Text(item, overflow: TextOverflow.ellipsis)),
+                        ),
+                        const DropdownMenuItem(
+                          value: '__ADD_CUSTOM_ITEM__',
+                          child: Row(
+                            children: [
+                              Icon(Icons.add_circle_outline, size: 16, color: AppTheme.primary),
+                              SizedBox(width: 6),
+                              Text('+ Custom Item...', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        if (val == '__ADD_CUSTOM_ITEM__') {
+                          _addCustomWorkItem();
+                        } else if (val != null) {
+                          setState(() {
+                            _selectedItem = val;
+                            _updateActivityText();
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+
+                  // Action Dropdown + Add Custom Action
+                  Expanded(
+                    flex: 2,
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _railActions.contains(_selectedAction) ? _selectedAction : _railActions.first,
+                      decoration: const InputDecoration(
+                        labelText: 'Action',
+                        prefixIcon: Icon(Icons.bolt_outlined, size: 18),
+                      ),
+                      isExpanded: true,
+                      items: [
+                        ..._railActions.map(
+                          (action) => DropdownMenuItem(value: action, child: Text(action, overflow: TextOverflow.ellipsis)),
+                        ),
+                        const DropdownMenuItem(
+                          value: '__ADD_CUSTOM_ACTION__',
+                          child: Row(
+                            children: [
+                              Icon(Icons.add_circle_outline, size: 16, color: AppTheme.primary),
+                              SizedBox(width: 6),
+                              Text('+ Custom...', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        if (val == '__ADD_CUSTOM_ACTION__') {
+                          _addCustomAction();
+                        } else if (val != null) {
+                          setState(() {
+                            _selectedAction = val;
+                            _updateActivityText();
+                          });
+                        }
+                      },
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
 
-              // Activity Field (editable text)
+              // Activity Field (Editable text preview)
               TextField(
                 controller: _activityCtrl,
                 decoration: const InputDecoration(
@@ -456,39 +557,16 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
             ),
             const SizedBox(height: 12),
 
-            // Optional Remarks
+            // Remarks field (Custom remarks without predefined pills)
             TextField(
               controller: _remarksCtrl,
               decoration: const InputDecoration(
-                labelText: 'Remarks / Extra info (optional)',
-                hintText: 'e.g. Km 84/10 to 86/00',
+                labelText: 'Remarks (optional)',
+                hintText: 'e.g. Km 84/10 to 86/00, caution order, etc.',
+                prefixIcon: Icon(Icons.notes_rounded, size: 18),
               ),
             ),
-            const SizedBox(height: 8),
-
-            // Quick remark chips
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: _quickRemarks.map((rem) {
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: ActionChip(
-                      label: Text(rem, style: const TextStyle(fontSize: 11)),
-                      backgroundColor: AppTheme.surfaceVariant.withValues(alpha: 0.4),
-                      onPressed: () {
-                        if (_remarksCtrl.text.isEmpty) {
-                          _remarksCtrl.text = rem;
-                        } else {
-                          _remarksCtrl.text = '${_remarksCtrl.text}, $rem';
-                        }
-                      },
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
 
             // Save button
             ElevatedButton.icon(
@@ -501,7 +579,7 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
               icon: const Icon(Icons.check_circle_rounded, size: 20),
               label: Text(
                 widget.initialEntry != null ? 'Update Entry' : 'Add to Shift Log',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
               ),
             ),
           ],

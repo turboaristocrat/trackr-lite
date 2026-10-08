@@ -92,9 +92,9 @@ class _ShiftScreenState extends State<ShiftScreen> {
       lastDate: DateTime(2030),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.dark(
+          colorScheme: const ColorScheme.light(
             primary: AppTheme.primary,
-            surface: AppTheme.surface,
+            surface: AppTheme.cardBg,
           ),
         ),
         child: child!,
@@ -113,7 +113,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: AppTheme.cardBg,
         title: const Row(
           children: [
             Icon(Icons.preview_rounded, color: AppTheme.primary, size: 20),
@@ -133,7 +133,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
             child: const Text('Close'),
           ),
           ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0088CC)),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.telegramBlue),
             icon: const Icon(Icons.send_rounded, size: 16),
             label: const Text('Telegram'),
             onPressed: () {
@@ -157,7 +157,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: AppTheme.cardBg,
         title: const Text('Complete & Archive Shift?'),
         content: const Text(
           'This will save today\'s shift into History and share the official report to Telegram.',
@@ -168,7 +168,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
             child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0088CC)),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.telegramBlue),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Complete & Share'),
           ),
@@ -185,7 +185,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Shift archived to History successfully!'),
-            backgroundColor: AppTheme.primary,
+            backgroundColor: AppTheme.railSafetyGreen,
           ),
         );
       }
@@ -211,14 +211,14 @@ class _ShiftScreenState extends State<ShiftScreen> {
 
     return Column(
       children: [
-        // Top Header Card (Machine, Section, Ready, Stabled)
+        // ================= TOP HEADER CARD =================
         Container(
-          margin: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+          margin: const EdgeInsets.fromLTRB(16, 10, 16, 6),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: AppTheme.surface,
+            color: AppTheme.cardBg,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppTheme.outline.withValues(alpha: 0.5)),
+            border: Border.all(color: AppTheme.borderColor),
           ),
           child: Column(
             children: [
@@ -231,8 +231,9 @@ class _ShiftScreenState extends State<ShiftScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: AppTheme.surfaceVariant.withValues(alpha: 0.6),
+                        color: AppTheme.surfaceContainerLow,
                         borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppTheme.borderColor),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -245,6 +246,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
+
                   // Machine Badge
                   InkWell(
                     onTap: _editSetup,
@@ -252,9 +254,9 @@ class _ShiftScreenState extends State<ShiftScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: AppTheme.primary.withValues(alpha: 0.15),
+                        color: AppTheme.primary.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.4)),
+                        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -262,7 +264,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
                           const Icon(Icons.train_rounded, size: 15, color: AppTheme.primary),
                           const SizedBox(width: 4),
                           Text(
-                            '${shift.machineType}${shift.machineNo}',
+                            shift.machineName,
                             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.primary),
                           ),
                         ],
@@ -286,7 +288,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
               ),
               const SizedBox(height: 8),
 
-              // Division & Section + Ready/Stabled Line
+              // Division & Section
               InkWell(
                 onTap: _editSetup,
                 borderRadius: BorderRadius.circular(8),
@@ -295,29 +297,14 @@ class _ShiftScreenState extends State<ShiftScreen> {
                   child: Row(
                     children: [
                       Text(
-                        '📍 ${shift.division} / ${shift.section}',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: AppTheme.textPrimary),
+                        '📍 Division: ${shift.division}   •   Section: ${shift.section}',
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppTheme.textPrimary),
                       ),
-                      if (shift.readyStation.isNotEmpty && shift.readyTime.isNotEmpty) ...[
-                        const SizedBox(width: 10),
-                        Flexible(
-                          child: Text(
-                            '• Ready: ${shift.readyStation} (${shift.readyTime})',
-                            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                      if (shift.stabledStation.isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Text(
-                            '• Stabled: ${shift.stabledStation}',
-                            style: const TextStyle(color: AppTheme.amberAccent, fontSize: 12),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
+                      const Spacer(),
+                      const Text(
+                        'Edit ➔',
+                        style: TextStyle(fontSize: 11.5, color: AppTheme.textMuted, fontWeight: FontWeight.w500),
+                      ),
                     ],
                   ),
                 ),
@@ -326,27 +313,27 @@ class _ShiftScreenState extends State<ShiftScreen> {
 
               // KPI bar
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: AppTheme.background,
+                  color: AppTheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     _buildKpi('${shift.blockCount}', 'Blocks', Icons.layers_rounded, AppTheme.primary),
-                    Container(width: 1, height: 18, color: AppTheme.outline.withValues(alpha: 0.3)),
+                    Container(width: 1, height: 18, color: AppTheme.borderColor),
                     _buildKpi(
                       shift.totalBlockOutput > 0
                           ? (shift.totalBlockOutput.truncateToDouble() == shift.totalBlockOutput
                               ? shift.totalBlockOutput.toInt().toString()
                               : shift.totalBlockOutput.toStringAsFixed(0))
                           : '0',
-                      'Total Nos',
+                      'Total Output',
                       Icons.trending_up_rounded,
                       AppTheme.secondary,
                     ),
-                    Container(width: 1, height: 18, color: AppTheme.outline.withValues(alpha: 0.3)),
+                    Container(width: 1, height: 18, color: AppTheme.borderColor),
                     _buildKpi(
                       shift.totalTransitKm > 0 ? '${shift.totalTransitKm}k' : '0k',
                       'Transit',
@@ -360,6 +347,53 @@ class _ShiftScreenState extends State<ShiftScreen> {
           ),
         ),
 
+        // ================= SEPARATE SECTION 1: MACHINE READY =================
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
+          child: InkWell(
+            onTap: _editSetup,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              decoration: BoxDecoration(
+                color: AppTheme.cardBg,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: shift.readyStation.isNotEmpty ? AppTheme.railSafetyGreen.withValues(alpha: 0.5) : AppTheme.borderColor,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      color: AppTheme.railSafetyGreen.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.play_circle_fill_rounded, color: AppTheme.railSafetyGreen, size: 16),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      shift.readyStation.isNotEmpty && shift.readyTime.isNotEmpty
+                          ? 'Machine ready at ${shift.readyStation} – ${shift.readyTime} hrs.'
+                          : (shift.readyStation.isNotEmpty
+                              ? 'Machine ready at ${shift.readyStation}'
+                              : 'Machine Ready: Tap to set station & time'),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12.5,
+                        color: shift.readyStation.isNotEmpty ? AppTheme.textPrimary : AppTheme.textMuted,
+                      ),
+                    ),
+                  ),
+                  const Icon(Icons.edit_outlined, size: 16, color: AppTheme.textMuted),
+                ],
+              ),
+            ),
+          ),
+        ),
+
         // Action Buttons (+ Log Block / + Transit)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -368,36 +402,34 @@ class _ShiftScreenState extends State<ShiftScreen> {
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: () => _addOrEditBlock(isTransit: false),
-                  icon: const Icon(Icons.add_rounded, size: 20),
+                  icon: const Icon(Icons.add_rounded, size: 19),
                   label: const Text('Log Block'),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.amberAccent,
-                    side: const BorderSide(color: AppTheme.amberAccent),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
                   onPressed: () => _addOrEditBlock(isTransit: true),
-                  icon: const Icon(Icons.directions_railway_rounded, size: 18),
-                  label: const Text('Log Transit', style: TextStyle(fontWeight: FontWeight.bold)),
+                  icon: const Icon(Icons.directions_railway_rounded, size: 18, color: AppTheme.secondary),
+                  label: const Text('Log Transit'),
                 ),
               ),
             ],
           ),
         ),
 
-        // Blocks List
+        // Blocks List + Machine Stabled at the bottom
         Expanded(
           child: shift.blocks.isEmpty
               ? _buildEmptyState()
               : ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 100),
-                  itemCount: shift.blocks.length,
+                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
+                  itemCount: shift.blocks.length + 1, // +1 for Machine Stabled section at the bottom
                   itemBuilder: (ctx, i) {
+                    if (i == shift.blocks.length) {
+                      // ================= SEPARATE SECTION 2: MACHINE STABLE (BOTTOM) =================
+                      return _buildMachineStabledCard(shift);
+                    }
                     final block = shift.blocks[i];
                     final currentIdx = block.isTransit ? 0 : blockCounter++;
                     return _buildBlockCard(block, currentIdx);
@@ -408,6 +440,54 @@ class _ShiftScreenState extends State<ShiftScreen> {
         // Bottom Primary Telegram Share Bar
         _buildBottomShareBar(shift),
       ],
+    );
+  }
+
+  Widget _buildMachineStabledCard(ShiftLog shift) {
+    return Container(
+      margin: const EdgeInsets.only(top: 6, bottom: 12),
+      child: InkWell(
+        onTap: _editSetup,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppTheme.cardBg,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: shift.stabledStation.isNotEmpty ? AppTheme.amberAccent.withValues(alpha: 0.6) : AppTheme.borderColor,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: AppTheme.amberAccent.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.flag_rounded, color: AppTheme.amberAccent, size: 16),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  shift.stabledStation.isNotEmpty
+                      ? (shift.stabledTime.isNotEmpty
+                          ? 'Machine stabled at ${shift.stabledStation} – ${shift.stabledTime} hrs.'
+                          : 'Machine stabled at ${shift.stabledStation}.')
+                      : 'Machine Stabled: Tap to set station at end of shift',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12.5,
+                    color: shift.stabledStation.isNotEmpty ? AppTheme.textPrimary : AppTheme.textMuted,
+                  ),
+                ),
+              ),
+              const Icon(Icons.edit_outlined, size: 16, color: AppTheme.textMuted),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -437,20 +517,20 @@ class _ShiftScreenState extends State<ShiftScreen> {
           children: [
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceVariant.withValues(alpha: 0.3),
+              decoration: const BoxDecoration(
+                color: AppTheme.surfaceContainerLow,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.edit_calendar_rounded, size: 36, color: AppTheme.textSecondary),
+              child: const Icon(Icons.edit_calendar_rounded, size: 36, color: AppTheme.textMuted),
             ),
             const SizedBox(height: 12),
             const Text(
               'No blocks logged today',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary),
             ),
             const SizedBox(height: 6),
             const Text(
-              'Tap "+ Log Block" to record Sleepers/Rails/Turnout work, or "+ Log Transit" for movement runs.',
+              'Tap "+ Log Block" to record Sleepers/Rails work, or "+ Log Transit" for movement runs.',
               textAlign: TextAlign.center,
               style: TextStyle(color: AppTheme.textSecondary, fontSize: 12.5, height: 1.4),
             ),
@@ -462,7 +542,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
 
   Widget _buildBlockCard(BlockEntry b, int blockNumber) {
     final isTransit = b.isTransit;
-    final color = isTransit ? AppTheme.amberAccent : AppTheme.primary;
+    final color = isTransit ? AppTheme.secondary : AppTheme.primary;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
@@ -477,13 +557,19 @@ class _ShiftScreenState extends State<ShiftScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.15),
+                    color: isTransit ? AppTheme.amberAccent.withValues(alpha: 0.15) : AppTheme.surfaceContainerLow,
                     borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: color.withValues(alpha: 0.4)),
+                    border: Border.all(
+                      color: isTransit ? AppTheme.amberAccent.withValues(alpha: 0.4) : AppTheme.borderColor,
+                    ),
                   ),
                   child: Text(
                     isTransit ? 'TRANSIT' : 'Block – $blockNumber',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5, color: color),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11.5,
+                      color: isTransit ? AppTheme.amberAccent : AppTheme.textPrimary,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -491,11 +577,11 @@ class _ShiftScreenState extends State<ShiftScreen> {
                   isTransit
                       ? '${b.startTime} – ${b.endTime} hrs'
                       : 'BT: ${b.startTime} – ${b.endTime} hrs',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: AppTheme.textPrimary),
                 ),
                 const Spacer(),
                 IconButton(
-                  icon: const Icon(Icons.edit_outlined, size: 18, color: AppTheme.textSecondary),
+                  icon: const Icon(Icons.edit_outlined, size: 18, color: AppTheme.textMuted),
                   visualDensity: VisualDensity.compact,
                   onPressed: () => _addOrEditBlock(existing: b),
                 ),
@@ -516,7 +602,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
                     isTransit
                         ? '${b.stationFrom} – ${b.stationTo}'
                         : '${b.stationFrom} – ${b.stationTo} (${b.line})',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textPrimary),
                   ),
                 ),
                 // Output Highlight
@@ -524,8 +610,9 @@ class _ShiftScreenState extends State<ShiftScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.12),
+                      color: color.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: color.withValues(alpha: 0.2)),
                     ),
                     child: Text(
                       isTransit
@@ -552,9 +639,9 @@ class _ShiftScreenState extends State<ShiftScreen> {
   Widget _buildBottomShareBar(ShiftLog shift) {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        border: Border(top: BorderSide(color: AppTheme.outline.withValues(alpha: 0.4))),
+      decoration: const BoxDecoration(
+        color: AppTheme.cardBg,
+        border: Border(top: BorderSide(color: AppTheme.borderColor)),
       ),
       child: SafeArea(
         top: false,
@@ -565,7 +652,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
               flex: 4,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0088CC), // Telegram Blue
+                  backgroundColor: AppTheme.telegramBlue, // Telegram Blue
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -583,8 +670,8 @@ class _ShiftScreenState extends State<ShiftScreen> {
             // Secondary WhatsApp Button
             IconButton.filledTonal(
               style: IconButton.styleFrom(
-                backgroundColor: const Color(0xFF25D366).withValues(alpha: 0.2),
-                foregroundColor: const Color(0xFF25D366),
+                backgroundColor: AppTheme.whatsAppGreen.withValues(alpha: 0.15),
+                foregroundColor: AppTheme.whatsAppGreen,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 padding: const EdgeInsets.all(12),
               ),
@@ -597,7 +684,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
             // Copy Report Button
             IconButton.filledTonal(
               style: IconButton.styleFrom(
-                backgroundColor: AppTheme.surfaceVariant,
+                backgroundColor: AppTheme.surfaceContainerLow,
                 foregroundColor: AppTheme.textPrimary,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 padding: const EdgeInsets.all(12),
@@ -618,7 +705,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
             // Complete & Archive Button
             IconButton.filledTonal(
               style: IconButton.styleFrom(
-                backgroundColor: AppTheme.primary.withValues(alpha: 0.15),
+                backgroundColor: AppTheme.primary.withValues(alpha: 0.08),
                 foregroundColor: AppTheme.primary,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 padding: const EdgeInsets.all(12),

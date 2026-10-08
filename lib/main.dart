@@ -16,7 +16,8 @@ class TrackrLiteApp extends StatelessWidget {
     return MaterialApp(
       title: 'TRACKR Lite',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.lightTheme,
       home: const MainScaffold(),
     );
   }
@@ -36,6 +37,7 @@ class _MainScaffoldState extends State<MainScaffold> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.background,
       appBar: _currentIndex == 0
           ? AppBar(
               title: Row(
@@ -43,7 +45,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: AppTheme.primary.withValues(alpha: 0.15),
+                      color: AppTheme.primary.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.flash_on_rounded, color: AppTheme.primary, size: 20),
@@ -51,21 +53,25 @@ class _MainScaffoldState extends State<MainScaffold> {
                   const SizedBox(width: 8),
                   const Text(
                     'TRACKR',
-                    style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.8,
+                      color: AppTheme.textPrimary,
+                    ),
                   ),
                   const SizedBox(width: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                     decoration: BoxDecoration(
-                      color: AppTheme.amberAccent.withValues(alpha: 0.2),
+                      color: AppTheme.secondaryContainer,
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: const Text(
                       'LITE',
                       style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.amberAccent,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF281800),
                         letterSpacing: 0.5,
                       ),
                     ),
@@ -75,11 +81,11 @@ class _MainScaffoldState extends State<MainScaffold> {
               actions: [
                 Container(
                   margin: const EdgeInsets.only(right: 14),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppTheme.surfaceVariant.withValues(alpha: 0.5),
+                    color: AppTheme.surfaceContainerLow,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppTheme.outline.withValues(alpha: 0.3)),
+                    border: Border.all(color: AppTheme.borderColor),
                   ),
                   child: const Text(
                     'Southern Railway',
@@ -104,17 +110,15 @@ class _MainScaffoldState extends State<MainScaffold> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (idx) => setState(() => _currentIndex = idx),
-        backgroundColor: AppTheme.surface,
-        indicatorColor: AppTheme.primary.withValues(alpha: 0.2),
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.edit_note_rounded),
-            selectedIcon: Icon(Icons.edit_note_rounded, color: AppTheme.primary),
+            selectedIcon: Icon(Icons.edit_note_rounded),
             label: 'Active Shift',
           ),
           NavigationDestination(
             icon: Icon(Icons.history_rounded),
-            selectedIcon: Icon(Icons.history_rounded, color: AppTheme.primary),
+            selectedIcon: Icon(Icons.history_rounded),
             label: 'History',
           ),
         ],

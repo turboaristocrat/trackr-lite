@@ -14,7 +14,7 @@ class ReportService {
       formattedDate = log.date;
     }
 
-    final machineTitle = '${log.machineType}${log.machineNo}'.replaceAll(' ', '');
+    final machineTitle = log.machineName.replaceAll(' ', '').trim();
 
     final buffer = StringBuffer();
     buffer.writeln('Progress of $machineTitle on $formattedDate');
@@ -112,7 +112,7 @@ class ReportService {
 
     // Fallback to standard system share
     // ignore: deprecated_member_use
-    await Share.share(text, subject: 'Progress of ${log.machineType}${log.machineNo} on ${log.date}');
+    await Share.share(text, subject: 'Progress of ${log.machineName} on ${log.date}');
   }
 
   // --- WhatsApp Secondary Sharing ---
@@ -130,7 +130,7 @@ class ReportService {
 
     // Fallback to standard system share
     // ignore: deprecated_member_use
-    await Share.share(text, subject: 'Progress of ${log.machineType}${log.machineNo} on ${log.date}');
+    await Share.share(text, subject: 'Progress of ${log.machineName} on ${log.date}');
   }
 
   // --- Copy to Clipboard ---

@@ -6,8 +6,7 @@ import '../models/shift_log.dart';
 class StorageService {
   static const _activeShiftKey = 'trackr_lite_active_shift';
   static const _historyKey = 'trackr_lite_history';
-  static const _machineTypeKey = 'trackr_lite_machine_type';
-  static const _machineNoKey = 'trackr_lite_machine_no';
+  static const _machineNameKey = 'trackr_lite_machine_name';
   static const _divisionKey = 'trackr_lite_division';
   static const _sectionKey = 'trackr_lite_section';
   static const _readyStationKey = 'trackr_lite_ready_station';
@@ -26,8 +25,9 @@ class StorageService {
       } catch (_) {}
     }
 
-    final mType = prefs.getString(_machineTypeKey) ?? 'UTV';
-    final mNo = prefs.getString(_machineNoKey) ?? '005H';
+    // Fallbacks or remembered preferences
+    final mName = prefs.getString(_machineNameKey) ??
+        '${prefs.getString('trackr_lite_machine_type') ?? 'UTV'}${prefs.getString('trackr_lite_machine_no') ?? '005H'}';
     final div = prefs.getString(_divisionKey) ?? 'TVC';
     final sec = prefs.getString(_sectionKey) ?? 'KTYM';
     final rStation = prefs.getString(_readyStationKey) ?? 'CGY';
@@ -35,8 +35,7 @@ class StorageService {
 
     final fresh = ShiftLog(
       date: today,
-      machineType: mType,
-      machineNo: mNo,
+      machineName: mName.isNotEmpty ? mName : 'UTV005H',
       division: div,
       section: sec,
       readyStation: rStation,
@@ -51,8 +50,7 @@ class StorageService {
   static Future<void> saveActiveShift(ShiftLog log) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_activeShiftKey, jsonEncode(log.toJson()));
-    await prefs.setString(_machineTypeKey, log.machineType);
-    await prefs.setString(_machineNoKey, log.machineNo);
+    await prefs.setString(_machineNameKey, log.machineName);
     await prefs.setString(_divisionKey, log.division);
     await prefs.setString(_sectionKey, log.section);
     if (log.readyStation.isNotEmpty) {
