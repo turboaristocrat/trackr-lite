@@ -477,7 +477,7 @@ class SettingsScreenState extends State<SettingsScreen> {
             const TrackrLogo(iconSize: 28, fontSize: 16),
             const SizedBox(height: 6),
             const Text(
-              'Field Edition • Southern Railway',
+              '© johnsankeyjob@gmail.com',
               style: TextStyle(fontSize: 11.5, color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 8),

@@ -53,21 +53,6 @@ class _MainScaffoldState extends State<MainScaffold> {
       appBar: _currentIndex == 0
           ? AppBar(
               title: const TrackrLogo(iconSize: 32, fontSize: 18),
-              actions: [
-                Container(
-                  margin: const EdgeInsets.only(right: 14),
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppTheme.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppTheme.borderColor),
-                  ),
-                  child: const Text(
-                    'Southern Railway',
-                    style: TextStyle(fontSize: 11, color: AppTheme.textSecondary, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
             )
           : null,
       body: IndexedStack(
