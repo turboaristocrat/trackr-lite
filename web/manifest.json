@@ -6,7 +6,7 @@
   "scope": "./",
   "display": "standalone",
   "background_color": "#0F172A",
-  "theme_color": "#10B981",
+  "theme_color": "#0F172A",
   "description": "Lightweight field shift logbook and WhatsApp report generator for Indian Railways Track Machine operators.",
   "orientation": "portrait-primary",
   "prefer_related_applications": false,

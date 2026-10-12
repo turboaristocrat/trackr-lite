@@ -154,7 +154,7 @@ void main() {
       expect(restored.remarks, log.remarks);
     });
 
-    test('Formats night shift date as dual dates (e.g. 12/13/10/2026)', () {
+    test('Formats night shift date as dual dates (e.g. 12/13.10.2026)', () {
       const dayLog = ShiftLog(
         date: '2026-10-12',
         machineName: 'UTV005H',
