@@ -128,7 +128,7 @@ void main() {
       expect(report, contains('= 25 nos'));
     });
 
-    test('Includes shift remarks before machine stabled section', () {
+    test('Includes shift remarks after machine stabled section', () {
       const log = ShiftLog(
         date: '2026-09-12',
         machineName: 'UTV005H',
@@ -145,7 +145,7 @@ void main() {
       expect(report, contains('Machine stabled at KTYM – 17:30 hrs.'));
       final remarksPos = report.indexOf('Remarks:');
       final stabledPos = report.indexOf('Machine stabled');
-      expect(remarksPos, lessThan(stabledPos));
+      expect(stabledPos, lessThan(remarksPos));
 
       // Test JSON roundtrip
       final json = log.toJson();

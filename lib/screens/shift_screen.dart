@@ -621,12 +621,12 @@ class ShiftScreenState extends State<ShiftScreen> {
                   itemCount: shift.blocks.length + 2,
                   itemBuilder: (ctx, i) {
                     if (i == shift.blocks.length) {
-                      // ================= DEDICATED SHIFT REMARKS SECTION =================
-                      return _buildRemarksCard(shift);
-                    }
-                    if (i == shift.blocks.length + 1) {
                       // ================= DEDICATED MACHINE STABLED SECTION =================
                       return _buildMachineStabledCard(shift);
+                    }
+                    if (i == shift.blocks.length + 1) {
+                      // ================= DEDICATED SHIFT REMARKS SECTION =================
+                      return _buildRemarksCard(shift);
                     }
                     final block = shift.blocks[i];
                     final currentIdx = block.isTransit ? 0 : blockCounter++;
@@ -810,8 +810,8 @@ class ShiftScreenState extends State<ShiftScreen> {
           ),
           const SizedBox(height: 10),
           if (_shift != null) ...[
-            _buildRemarksCard(_shift!),
             _buildMachineStabledCard(_shift!),
+            _buildRemarksCard(_shift!),
           ],
         ],
       ),

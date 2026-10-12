@@ -81,12 +81,6 @@ class ReportService {
       buffer.writeln();
     }
 
-    // Remarks line
-    if (log.remarks.trim().isNotEmpty) {
-      buffer.writeln('Remarks: ${log.remarks.trim()}');
-      buffer.writeln();
-    }
-
     // Stabled line
     if (log.stabledStation.isNotEmpty) {
       if (log.stabledTime.isNotEmpty) {
@@ -94,6 +88,14 @@ class ReportService {
       } else {
         buffer.writeln('Machine stabled at ${log.stabledStation}.');
       }
+    }
+
+    // Remarks line (after machine stabled)
+    if (log.remarks.trim().isNotEmpty) {
+      if (log.stabledStation.isNotEmpty) {
+        buffer.writeln();
+      }
+      buffer.writeln('Remarks: ${log.remarks.trim()}');
     }
 
     return buffer.toString().trim();
