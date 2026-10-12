@@ -237,21 +237,112 @@ class SettingsScreenState extends State<SettingsScreen> {
   Future<void> _handleResetAllData() async {
     final confirm = await showDialog<bool>(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.cardBg,
-        title: const Text('Reset Everything to 0?'),
-        content: const Text(
-          'This will clear today\'s active shift, all block entries, completed history, and all notes/reminders.\n\nThe app will be set to a completely fresh clean slate for testing.',
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: AppTheme.redDanger.withValues(alpha: 0.6), width: 1.5),
         ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.redDanger.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.warning_amber_rounded,
+                color: AppTheme.redDanger,
+                size: 26,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Reset All Data to 0?',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppTheme.redDanger.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppTheme.redDanger.withValues(alpha: 0.3)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.error_outline_rounded, color: AppTheme.redDanger, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Warning: This action cannot be undone!',
+                      style: TextStyle(
+                        color: AppTheme.redDanger,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'Resetting will permanently erase all local data from this device:',
+              style: TextStyle(fontSize: 12.5, color: AppTheme.textSecondary, height: 1.35),
+            ),
+            const SizedBox(height: 10),
+            _buildResetWarningBullet('Active shift draft, blocks, outputs, and remarks'),
+            _buildResetWarningBullet('All saved shift history logs'),
+            _buildResetWarningBullet('All field notes and reminders'),
+            _buildResetWarningBullet('Station preferences (Ready & Stabled stations)'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(9),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppTheme.borderColor),
+              ),
+              child: const Text(
+                '💡 Tip: Use "Copy JSON" or "Export Backup File" before resetting if you need a copy of your records.',
+                style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+              ),
+            ),
+          ],
+        ),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         actions: [
-          TextButton(
+          OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: AppTheme.borderColor),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            ),
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary)),
+            child: const Text('Cancel / Keep Data', style: TextStyle(color: AppTheme.textPrimary, fontSize: 12.5)),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.redDanger),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.redDanger,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Reset All to 0'),
+            icon: const Icon(Icons.delete_forever_rounded, size: 17),
+            label: const Text('Reset to 0 State', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
           ),
         ],
       ),
@@ -271,6 +362,24 @@ class SettingsScreenState extends State<SettingsScreen> {
         );
       }
     }
+  }
+
+  Widget _buildResetWarningBullet(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('• ', style: TextStyle(color: AppTheme.redDanger, fontSize: 13, fontWeight: FontWeight.bold)),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 12, color: AppTheme.textPrimary, height: 1.3),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

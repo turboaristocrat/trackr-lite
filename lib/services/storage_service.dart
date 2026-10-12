@@ -77,7 +77,24 @@ class StorageService {
     if (raw != null) {
       try {
         final log = ShiftLog.fromJson(jsonDecode(raw) as Map<String, dynamic>);
-        if (log.date == today) return log;
+        // Preserve active shift across app updates, date rollovers, and night shifts
+        // whenever the shift has any user data (blocks, remarks, or station times),
+        // or if it was created for today.
+        final hasActiveData = log.blocks.isNotEmpty ||
+            log.remarks.trim().isNotEmpty ||
+            log.readyTime.trim().isNotEmpty ||
+            log.stabledTime.trim().isNotEmpty ||
+            log.isNightShift;
+
+        if (log.date == today || hasActiveData) {
+          return log;
+        }
+
+        // If it was a completely blank template from a previous day, roll date forward
+        // while safely keeping their machine, division, section preferences.
+        final updated = log.copyWith(date: today);
+        await saveActiveShift(updated);
+        return updated;
       } catch (_) {}
     }
 

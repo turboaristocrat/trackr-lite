@@ -274,5 +274,37 @@ void main() {
       updated = await StorageService.getRemarkTemplates();
       expect(updated, isNot(contains('Custom Track Template #1')));
     });
+
+    test('Preserves user active shift across date changes and app updates if work is logged', () async {
+      final pastDateShift = ShiftLog(
+        date: '2026-10-10', // Past date
+        machineName: 'UTV005H',
+        division: 'TVC',
+        section: 'KTYM',
+        remarks: 'Night work in progress',
+        isNightShift: true,
+        blocks: [
+          const BlockEntry(
+            id: 'p1',
+            startTime: '22:00',
+            endTime: '02:00',
+            stationFrom: 'KTYM',
+            stationTo: 'CGY',
+            items: [
+              WorkItem(activity: 'Sleepers unloaded', output: 120, outputUnit: 'Nos'),
+            ],
+          ),
+        ],
+      );
+
+      await StorageService.saveActiveShift(pastDateShift);
+
+      // Fetching active shift on a different day must preserve user's data
+      final retrieved = await StorageService.getActiveShift();
+      expect(retrieved.blocks.length, 1);
+      expect(retrieved.remarks, 'Night work in progress');
+      expect(retrieved.blocks.first.items.first.output, 120);
+      expect(retrieved.isNightShift, isTrue);
+    });
   });
 }
