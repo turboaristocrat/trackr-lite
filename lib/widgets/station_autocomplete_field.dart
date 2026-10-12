@@ -3,8 +3,9 @@ import '../models/station.dart';
 import '../services/station_service.dart';
 import '../theme/app_theme.dart';
 
-class StationAutocompleteField extends StatelessWidget {
+class StationAutocompleteField extends StatefulWidget {
   final TextEditingController controller;
+  final FocusNode? focusNode;
   final String label;
   final String hintText;
   final Widget? prefixIcon;
@@ -12,18 +13,34 @@ class StationAutocompleteField extends StatelessWidget {
   const StationAutocompleteField({
     super.key,
     required this.controller,
+    this.focusNode,
     required this.label,
     this.hintText = 'e.g. CGY',
     this.prefixIcon,
   });
 
   @override
+  State<StationAutocompleteField> createState() => _StationAutocompleteFieldState();
+}
+
+class _StationAutocompleteFieldState extends State<StationAutocompleteField> {
+  FocusNode? _internalFocusNode;
+
+  FocusNode get _effectiveFocusNode => widget.focusNode ?? (_internalFocusNode ??= FocusNode());
+
+  @override
+  void dispose() {
+    _internalFocusNode?.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         return RawAutocomplete<Station>(
-          textEditingController: controller,
-          focusNode: FocusNode(),
+          textEditingController: widget.controller,
+          focusNode: _effectiveFocusNode,
           optionsBuilder: (TextEditingValue textEditingValue) {
             if (textEditingValue.text.trim().isEmpty) {
               return const Iterable<Station>.empty();
@@ -32,8 +49,8 @@ class StationAutocompleteField extends StatelessWidget {
           },
           displayStringForOption: (Station option) => option.code,
           onSelected: (Station selection) {
-            controller.text = selection.code;
-            controller.selection = TextSelection.fromPosition(
+            widget.controller.text = selection.code;
+            widget.controller.selection = TextSelection.fromPosition(
               TextPosition(offset: selection.code.length),
             );
           },
@@ -108,9 +125,9 @@ class StationAutocompleteField extends StatelessWidget {
                 }
               },
               decoration: InputDecoration(
-                labelText: label,
-                hintText: hintText,
-                prefixIcon: prefixIcon,
+                labelText: widget.label,
+                hintText: widget.hintText,
+                prefixIcon: widget.prefixIcon,
               ),
             );
           },

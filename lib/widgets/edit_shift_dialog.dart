@@ -24,6 +24,7 @@ class _EditShiftDialogState extends State<EditShiftDialog> {
   late TextEditingController _machineNameCtrl;
   late TextEditingController _divisionCtrl;
   late TextEditingController _sectionCtrl;
+  late FocusNode _sectionFocusNode;
 
   @override
   void initState() {
@@ -31,6 +32,7 @@ class _EditShiftDialogState extends State<EditShiftDialog> {
     _machineNameCtrl = TextEditingController(text: widget.currentShift.machineName);
     _divisionCtrl = TextEditingController(text: widget.currentShift.division);
     _sectionCtrl = TextEditingController(text: widget.currentShift.section);
+    _sectionFocusNode = FocusNode();
     _sectionCtrl.addListener(() {
       if (mounted) setState(() {});
     });
@@ -41,6 +43,7 @@ class _EditShiftDialogState extends State<EditShiftDialog> {
     _machineNameCtrl.dispose();
     _divisionCtrl.dispose();
     _sectionCtrl.dispose();
+    _sectionFocusNode.dispose();
     super.dispose();
   }
 
@@ -122,6 +125,7 @@ class _EditShiftDialogState extends State<EditShiftDialog> {
                       children: [
                         StationAutocompleteField(
                           controller: _sectionCtrl,
+                          focusNode: _sectionFocusNode,
                           label: 'Section Code',
                           hintText: 'e.g. ERS or KTYM',
                           prefixIcon: const Icon(Icons.signpost_rounded, size: 18),
