@@ -88,6 +88,12 @@ class ReportService {
       buffer.writeln();
     }
 
+    // Remarks line
+    if (log.remarks.trim().isNotEmpty) {
+      buffer.writeln('Remarks: ${log.remarks.trim()}');
+      buffer.writeln();
+    }
+
     // Stabled line
     if (log.stabledStation.isNotEmpty) {
       if (log.stabledTime.isNotEmpty) {

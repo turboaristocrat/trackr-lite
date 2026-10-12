@@ -20,6 +20,9 @@ class WhatsAppService {
     buffer.writeln('📅 *Date:* $formattedDate');
     buffer.writeln('🚜 *Machine:* ${log.machineType} ${log.machineNo}');
     buffer.writeln('📍 *Div / Sec:* ${log.division} / ${log.section}');
+    if (log.remarks.trim().isNotEmpty) {
+      buffer.writeln('📝 *Remarks:* ${log.remarks.trim()}');
+    }
     if (log.stabledStation.isNotEmpty) {
       buffer.writeln('🏠 *Stabled At:* ${log.stabledStation}');
     }

@@ -10,6 +10,7 @@ class ShiftLog {
   final String readyTime;
   final String stabledStation;
   final String stabledTime;
+  final String remarks;
   final List<BlockEntry> blocks;
   final List<ReminderItem> reminders;
 
@@ -22,6 +23,7 @@ class ShiftLog {
     this.readyTime = '',
     this.stabledStation = '',
     this.stabledTime = '',
+    this.remarks = '',
     required this.blocks,
     this.reminders = const [],
   });
@@ -66,6 +68,7 @@ class ShiftLog {
     'readyTime': readyTime,
     'stabledStation': stabledStation,
     'stabledTime': stabledTime,
+    'remarks': remarks,
     'blocks': blocks.map((b) => b.toJson()).toList(),
     'reminders': reminders.map((r) => r.toJson()).toList(),
   };
@@ -92,6 +95,7 @@ class ShiftLog {
       readyTime: json['readyTime'] as String? ?? '',
       stabledStation: json['stabledStation'] as String? ?? '',
       stabledTime: json['stabledTime'] as String? ?? '',
+      remarks: json['remarks'] as String? ?? '',
       blocks: (json['blocks'] as List<dynamic>?)
               ?.map((e) => BlockEntry.fromJson(e as Map<String, dynamic>))
               .toList() ??
@@ -109,6 +113,7 @@ class ShiftLog {
     String? readyTime,
     String? stabledStation,
     String? stabledTime,
+    String? remarks,
     List<BlockEntry>? blocks,
     List<ReminderItem>? reminders,
   }) {
@@ -121,6 +126,7 @@ class ShiftLog {
       readyTime: readyTime ?? this.readyTime,
       stabledStation: stabledStation ?? this.stabledStation,
       stabledTime: stabledTime ?? this.stabledTime,
+      remarks: remarks ?? this.remarks,
       blocks: blocks ?? this.blocks,
       reminders: reminders ?? this.reminders,
     );

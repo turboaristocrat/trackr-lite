@@ -127,6 +127,32 @@ void main() {
       expect(report, contains('Rails loaded: 5 Nos'));
       expect(report, contains('= 25 nos'));
     });
+
+    test('Includes shift remarks before machine stabled section', () {
+      const log = ShiftLog(
+        date: '2026-09-12',
+        machineName: 'UTV005H',
+        division: 'TVC',
+        section: 'KTYM',
+        stabledStation: 'KTYM',
+        stabledTime: '17:30',
+        remarks: 'Heavy rain delayed work. Machine in working condition.',
+        blocks: [],
+      );
+
+      final report = ReportService.formatReport(log);
+      expect(report, contains('Remarks: Heavy rain delayed work. Machine in working condition.'));
+      expect(report, contains('Machine stabled at KTYM – 17:30 hrs.'));
+      final remarksPos = report.indexOf('Remarks:');
+      final stabledPos = report.indexOf('Machine stabled');
+      expect(remarksPos, lessThan(stabledPos));
+
+      // Test JSON roundtrip
+      final json = log.toJson();
+      expect(json['remarks'], 'Heavy rain delayed work. Machine in working condition.');
+      final restored = ShiftLog.fromJson(json);
+      expect(restored.remarks, log.remarks);
+    });
   });
 
   group('StorageService', () {

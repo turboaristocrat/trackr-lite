@@ -9,6 +9,7 @@ import '../widgets/add_block_dialog.dart';
 import '../widgets/edit_machine_ready_dialog.dart';
 import '../widgets/edit_machine_stabled_dialog.dart';
 import '../widgets/edit_shift_dialog.dart';
+import '../widgets/edit_shift_remarks_dialog.dart';
 
 class ShiftScreen extends StatefulWidget {
   final VoidCallback onShiftCompleted;
@@ -104,6 +105,19 @@ class ShiftScreenState extends State<ShiftScreen> {
       await _saveShift(_shift!.copyWith(
         stabledStation: res['station'],
         stabledTime: res['time'],
+      ));
+    }
+  }
+
+  Future<void> _editShiftRemarks() async {
+    if (_shift == null) return;
+    final res = await EditShiftRemarksDialog.show(
+      context,
+      initialRemarks: _shift!.remarks,
+    );
+    if (res != null) {
+      await _saveShift(_shift!.copyWith(
+        remarks: res,
       ));
     }
   }
@@ -495,15 +509,19 @@ class ShiftScreenState extends State<ShiftScreen> {
           ),
         ),
 
-        // Blocks List + Machine Stabled at the bottom
+        // Blocks List + Remarks + Machine Stabled at the bottom
         Expanded(
           child: shift.blocks.isEmpty
               ? _buildEmptyState()
               : ListView.builder(
                   padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
-                  itemCount: shift.blocks.length + 1,
+                  itemCount: shift.blocks.length + 2,
                   itemBuilder: (ctx, i) {
                     if (i == shift.blocks.length) {
+                      // ================= DEDICATED SHIFT REMARKS SECTION =================
+                      return _buildRemarksCard(shift);
+                    }
+                    if (i == shift.blocks.length + 1) {
                       // ================= DEDICATED MACHINE STABLED SECTION =================
                       return _buildMachineStabledCard(shift);
                     }
@@ -520,9 +538,63 @@ class ShiftScreenState extends State<ShiftScreen> {
     );
   }
 
+  Widget _buildRemarksCard(ShiftLog shift) {
+    final hasRemarks = shift.remarks.trim().isNotEmpty;
+    return Container(
+      margin: const EdgeInsets.only(top: 8, bottom: 4),
+      child: InkWell(
+        onTap: _editShiftRemarks,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppTheme.cardBg,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: hasRemarks ? AppTheme.primary.withValues(alpha: 0.4) : AppTheme.borderColor,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.015),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.edit_note_rounded, color: AppTheme.primary, size: 16),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  hasRemarks
+                      ? 'Remarks: ${shift.remarks.trim()}'
+                      : 'Shift Remarks: Tap to add shift notes / remarks',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: hasRemarks ? AppTheme.textPrimary : AppTheme.textMuted,
+                  ),
+                ),
+              ),
+              const Icon(Icons.edit_outlined, size: 16, color: AppTheme.textMuted),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildMachineStabledCard(ShiftLog shift) {
     return Container(
-      margin: const EdgeInsets.only(top: 8, bottom: 16),
+      margin: const EdgeInsets.only(top: 4, bottom: 16),
       child: InkWell(
         onTap: _editMachineStabled,
         borderRadius: BorderRadius.circular(14),
@@ -596,7 +668,7 @@ class ShiftScreenState extends State<ShiftScreen> {
   Widget _buildEmptyState() {
     return Center(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -615,10 +687,15 @@ class ShiftScreenState extends State<ShiftScreen> {
             ),
             const SizedBox(height: 6),
             const Text(
-              'Tap "+ Log Block" to record Sleepers/Rails work, or "+ Log Transit" for movement runs.',
+              'Tap "+ Log Block / Transit" to record Sleepers/Rails work or movement runs.',
               textAlign: TextAlign.center,
               style: TextStyle(color: AppTheme.textSecondary, fontSize: 12.5, height: 1.4),
             ),
+            const SizedBox(height: 20),
+            if (_shift != null) ...[
+              _buildRemarksCard(_shift!),
+              _buildMachineStabledCard(_shift!),
+            ],
           ],
         ),
       ),

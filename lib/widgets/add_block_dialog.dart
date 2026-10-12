@@ -510,7 +510,7 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
                   style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold, fontSize: 13.5),
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
             ] else ...[
               // Transit Distance
               TextField(
@@ -559,8 +559,8 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
 
   Widget _buildWorkItemCard(_WorkItemFormItem formItem, int index) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppTheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(14),
@@ -572,7 +572,7 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppTheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
@@ -592,7 +592,7 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
                 ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 14),
 
           // Work Item Dropdown & Action Dropdown
           Row(
@@ -676,7 +676,7 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
 
           // Quantity & Unit
           Row(
@@ -714,7 +714,7 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
 
           // Activity Label preview
           TextField(
