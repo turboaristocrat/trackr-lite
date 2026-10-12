@@ -105,6 +105,60 @@ class SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _editTemplate(int index, String currentText) async {
+    final ctrl = TextEditingController(text: currentText);
+    final updated = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.cardBg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.edit_note_rounded, color: AppTheme.primary, size: 22),
+            SizedBox(width: 8),
+            Text('Edit Remark Template', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Update template wording for 1-tap reuse in shift remarks.',
+              style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: ctrl,
+              autofocus: true,
+              maxLines: 2,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Template Text',
+                hintText: 'e.g. Kindly arrange one barrel diesel',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+            child: const Text('Save Changes'),
+          ),
+        ],
+      ),
+    );
+
+    if (updated != null && updated.isNotEmpty) {
+      await StorageService.updateRemarkTemplate(index, updated);
+      await refreshSettings();
+    }
+  }
+
   Future<void> _deleteTemplate(int index) async {
     await StorageService.deleteRemarkTemplate(index);
     await refreshSettings();
@@ -571,42 +625,81 @@ class SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
             const SizedBox(height: 14),
-            ..._remarkTemplates.asMap().entries.map((entry) {
-              final idx = entry.key;
-              final tpl = entry.value;
-              final isDiesel = tpl.toLowerCase().startsWith('diesel filled');
-              return Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            if (_remarkTemplates.isEmpty)
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: AppTheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: AppTheme.borderColor),
                 ),
-                child: Row(
+                child: const Column(
                   children: [
-                    Icon(
-                      isDiesel ? Icons.local_gas_station_rounded : Icons.notes_rounded,
-                      size: 16,
-                      color: isDiesel ? AppTheme.amberAccent : AppTheme.primary,
+                    Icon(Icons.notes_rounded, color: AppTheme.textMuted, size: 28),
+                    SizedBox(height: 6),
+                    Text(
+                      'No remark templates yet.',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textSecondary),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        tpl,
-                        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline_rounded, size: 16, color: AppTheme.redDanger),
-                      visualDensity: VisualDensity.compact,
-                      tooltip: 'Delete Template',
-                      onPressed: () => _deleteTemplate(idx),
+                    SizedBox(height: 2),
+                    Text(
+                      'Tap "+ Add" above to create custom quick phrases.',
+                      style: TextStyle(fontSize: 11.5, color: AppTheme.textMuted),
                     ),
                   ],
                 ),
-              );
-            }),
+              )
+            else
+              ..._remarkTemplates.asMap().entries.map((entry) {
+                final idx = entry.key;
+                final tpl = entry.value;
+                final isDiesel = tpl.toLowerCase().contains('diesel');
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppTheme.borderColor),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        isDiesel ? Icons.local_gas_station_rounded : Icons.notes_rounded,
+                        size: 16,
+                        color: isDiesel ? AppTheme.amberAccent : AppTheme.primary,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => _editTemplate(idx, tpl),
+                          borderRadius: BorderRadius.circular(6),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: Text(
+                              tpl,
+                              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined, size: 16, color: AppTheme.primary),
+                        visualDensity: VisualDensity.compact,
+                        tooltip: 'Edit Template',
+                        onPressed: () => _editTemplate(idx, tpl),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline_rounded, size: 16, color: AppTheme.redDanger),
+                        visualDensity: VisualDensity.compact,
+                        tooltip: 'Delete Template',
+                        onPressed: () => _deleteTemplate(idx),
+                      ),
+                    ],
+                  ),
+                );
+              }),
             const SizedBox(height: 4),
             Align(
               alignment: Alignment.centerRight,

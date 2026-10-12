@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/storage_service.dart';
 import '../theme/app_theme.dart';
-import 'station_autocomplete_field.dart';
 
 class EditShiftRemarksDialog extends StatefulWidget {
   final String initialRemarks;
@@ -63,20 +62,19 @@ class _EditShiftRemarksDialogState extends State<EditShiftRemarksDialog> {
     setState(() {});
   }
 
-  Future<void> _showAddDieselPrompt() async {
-    final litresCtrl = TextEditingController();
-    final stationCtrl = TextEditingController();
+  Future<void> _showEditTemplatePrompt(int index, String currentText) async {
+    final customCtrl = TextEditingController(text: currentText);
 
-    final result = await showDialog<bool>(
+    final updated = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.cardBg,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Row(
           children: [
-            Icon(Icons.local_gas_station_rounded, color: AppTheme.amberAccent, size: 22),
+            Icon(Icons.edit_note_rounded, color: AppTheme.primary, size: 20),
             SizedBox(width: 8),
-            Text('Add Diesel Template', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            Text('Edit Remark Template', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ],
         ),
         content: Column(
@@ -84,59 +82,147 @@ class _EditShiftRemarksDialogState extends State<EditShiftRemarksDialog> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
-              'Quickly record diesel taken for the machine. Leave blank to insert placeholder.',
+              'Update template wording. Changes will be saved for all future shifts.',
               style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             TextField(
-              controller: litresCtrl,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              controller: customCtrl,
               autofocus: true,
+              maxLines: 2,
+              textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(
-                labelText: 'Quantity (Litres)',
-                hintText: 'e.g. 200',
-                prefixIcon: Icon(Icons.water_drop_outlined, size: 18),
-                suffixText: 'Ltrs',
+                labelText: 'Template Text',
+                hintText: 'e.g. Kindly arrange one barrel diesel',
               ),
-            ),
-            const SizedBox(height: 10),
-            StationAutocompleteField(
-              controller: stationCtrl,
-              label: 'Station (optional)',
-              hintText: 'e.g. KTYM',
-              prefixIcon: const Icon(Icons.ev_station_rounded, size: 18),
             ),
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
+            onPressed: () => Navigator.pop(ctx),
             child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary)),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Insert Template'),
+            onPressed: () => Navigator.pop(ctx, customCtrl.text.trim()),
+            child: const Text('Save Changes'),
           ),
         ],
       ),
     );
 
-    if (result == true) {
-      final litres = litresCtrl.text.trim();
-      final station = stationCtrl.text.trim().toUpperCase();
-
-      String text;
-      if (litres.isNotEmpty && station.isNotEmpty) {
-        text = 'Diesel filled: $litres Ltrs at $station.';
-      } else if (litres.isNotEmpty) {
-        text = 'Diesel filled: $litres Ltrs.';
-      } else if (station.isNotEmpty) {
-        text = 'Diesel filled: ___ Ltrs at $station.';
-      } else {
-        text = 'Diesel filled: ___ Ltrs at ___.';
-      }
-      _appendTemplate(text);
+    if (updated != null && updated.isNotEmpty) {
+      await StorageService.updateRemarkTemplate(index, updated);
+      await _loadTemplates();
     }
+  }
+
+  Future<void> _showManageTemplatesDialog() async {
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return AlertDialog(
+            backgroundColor: AppTheme.cardBg,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: [
+                const Icon(Icons.tune_rounded, color: AppTheme.primary, size: 22),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text('Manage Templates', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add_rounded, color: AppTheme.primary, size: 22),
+                  tooltip: 'Add Template',
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    await _showAddCustomTemplatePrompt();
+                    _showManageTemplatesDialog();
+                  },
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: 380,
+              child: _templates.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 20),
+                      child: Center(
+                        child: Text(
+                          'No templates saved.\nTap + above to add one.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 12.5, color: AppTheme.textSecondary),
+                        ),
+                      ),
+                    )
+                  : SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: _templates.asMap().entries.map((entry) {
+                          final idx = entry.key;
+                          final tpl = entry.value;
+                          final isDiesel = tpl.toLowerCase().contains('diesel');
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppTheme.surfaceContainerLow,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: AppTheme.borderColor),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isDiesel ? Icons.local_gas_station_rounded : Icons.notes_rounded,
+                                  size: 16,
+                                  color: isDiesel ? AppTheme.amberAccent : AppTheme.primary,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    tpl,
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.edit_outlined, size: 16, color: AppTheme.primary),
+                                  visualDensity: VisualDensity.compact,
+                                  tooltip: 'Edit',
+                                  onPressed: () async {
+                                    Navigator.pop(ctx);
+                                    await _showEditTemplatePrompt(idx, tpl);
+                                    _showManageTemplatesDialog();
+                                  },
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline_rounded, size: 16, color: AppTheme.redDanger),
+                                  visualDensity: VisualDensity.compact,
+                                  tooltip: 'Delete',
+                                  onPressed: () async {
+                                    await StorageService.deleteRemarkTemplate(idx);
+                                    await _loadTemplates();
+                                    setModalState(() {});
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Done'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    await _loadTemplates();
   }
 
   Future<void> _showAddCustomTemplatePrompt() async {
@@ -251,8 +337,26 @@ class _EditShiftRemarksDialogState extends State<EditShiftRemarksDialog> {
                           Icon(Icons.add, size: 14, color: AppTheme.primary),
                           SizedBox(width: 2),
                           Text(
-                            'Add Custom',
+                            'Add',
                             style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.primary),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: _showManageTemplatesDialog,
+                    borderRadius: BorderRadius.circular(6),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      child: Row(
+                        children: [
+                          Icon(Icons.tune_rounded, size: 13, color: AppTheme.textSecondary),
+                          SizedBox(width: 2),
+                          Text(
+                            'Manage',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textSecondary),
                           ),
                         ],
                       ),
@@ -265,40 +369,54 @@ class _EditShiftRemarksDialogState extends State<EditShiftRemarksDialog> {
               // Template Chips
               if (_isLoadingTemplates)
                 const SizedBox(height: 32, child: Center(child: CircularProgressIndicator(strokeWidth: 2)))
+              else if (_templates.isEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppTheme.borderColor),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 14, color: AppTheme.textMuted),
+                      SizedBox(width: 6),
+                      Text(
+                        'No templates yet. Tap "+ Add" above to create one.',
+                        style: TextStyle(fontSize: 11.5, color: AppTheme.textSecondary),
+                      ),
+                    ],
+                  ),
+                )
               else
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
-                  children: [
-                    // Dedicated Primary "Add Diesel" Action Chip
-                    ActionChip(
-                      avatar: const Icon(Icons.local_gas_station_rounded, size: 14, color: AppTheme.amberAccent),
-                      label: const Text(
-                        'Add Diesel',
-                        style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                  children: _templates.map((tpl) {
+                    final isDiesel = tpl.toLowerCase().contains('diesel');
+                    return ActionChip(
+                      avatar: Icon(
+                        isDiesel ? Icons.local_gas_station_rounded : Icons.notes_rounded,
+                        size: 13,
+                        color: isDiesel ? AppTheme.amberAccent : AppTheme.primary,
                       ),
-                      backgroundColor: AppTheme.amberAccent.withValues(alpha: 0.12),
-                      side: BorderSide(color: AppTheme.amberAccent.withValues(alpha: 0.4)),
-                      onPressed: _showAddDieselPrompt,
-                    ),
-
-                    // Other Saved Templates
-                    ..._templates
-                        .where((t) => !t.toLowerCase().startsWith('diesel filled'))
-                        .map((tpl) {
-                      return ActionChip(
-                        label: Text(
-                          tpl,
-                          style: const TextStyle(fontSize: 11),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        backgroundColor: AppTheme.surfaceContainerLow,
-                        side: const BorderSide(color: AppTheme.borderColor),
-                        onPressed: () => _appendTemplate(tpl),
-                      );
-                    }),
-                  ],
+                      label: Text(
+                        tpl,
+                        style: const TextStyle(fontSize: 11),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      backgroundColor: isDiesel
+                          ? AppTheme.amberAccent.withValues(alpha: 0.1)
+                          : AppTheme.surfaceContainerLow,
+                      side: BorderSide(
+                        color: isDiesel
+                            ? AppTheme.amberAccent.withValues(alpha: 0.35)
+                            : AppTheme.borderColor,
+                      ),
+                      onPressed: () => _appendTemplate(tpl),
+                    );
+                  }).toList(),
                 ),
               const SizedBox(height: 14),
 

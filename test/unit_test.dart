@@ -173,10 +173,10 @@ void main() {
         isNightShift: true,
         blocks: [],
       );
-      expect(nightLog.formattedDate, '12/13/10/2026');
+      expect(nightLog.formattedDate, '12/13.10.2026');
 
       final report = ReportService.formatReport(nightLog);
-      expect(report, contains('Progress of UTV005H on 12/13/10/2026'));
+      expect(report, contains('Progress of UTV005H on 12/13.10.2026'));
 
       // Month crossing check (e.g. Oct 31 to Nov 01)
       const monthEndLog = ShiftLog(
@@ -187,7 +187,7 @@ void main() {
         isNightShift: true,
         blocks: [],
       );
-      expect(monthEndLog.formattedDate, '31.10/01.11/2026');
+      expect(monthEndLog.formattedDate, '31.10/01.11.2026');
     });
   });
 
@@ -261,18 +261,33 @@ void main() {
       expect(notes, isEmpty);
     });
 
-    test('Saves, loads, and manages remark templates', () async {
+    test('Saves, loads, edits, and fully deletes remark templates', () async {
       final initial = await StorageService.getRemarkTemplates();
-      expect(initial, contains('Diesel filled: ___ Ltrs at ___'));
+      expect(initial, contains('Kindly arrange one barrel diesel'));
+      expect(initial, isNot(contains('Diesel filled: ___ Ltrs at ___')));
 
+      // Test adding
       await StorageService.addRemarkTemplate('Custom Track Template #1');
       var updated = await StorageService.getRemarkTemplates();
       expect(updated, contains('Custom Track Template #1'));
 
+      // Test editing
       final idx = updated.indexOf('Custom Track Template #1');
-      await StorageService.deleteRemarkTemplate(idx);
+      await StorageService.updateRemarkTemplate(idx, 'Modified Track Template #1');
       updated = await StorageService.getRemarkTemplates();
+      expect(updated, contains('Modified Track Template #1'));
       expect(updated, isNot(contains('Custom Track Template #1')));
+
+      // Test deleting all templates fully to empty list
+      while (updated.isNotEmpty) {
+        await StorageService.deleteRemarkTemplate(0);
+        updated = await StorageService.getRemarkTemplates();
+      }
+      expect(updated, isEmpty);
+
+      // Verify that after deletion, getRemarkTemplates still returns [] and does NOT restore defaults
+      final afterEmpty = await StorageService.getRemarkTemplates();
+      expect(afterEmpty, isEmpty);
     });
 
     test('Preserves user active shift across date changes and app updates if work is logged', () async {

@@ -42,10 +42,10 @@ class ShiftLog {
         final m = dt.month.toString().padLeft(2, '0');
         final y = dt.year.toString();
         if (dt.month == nextDay.month) {
-          return '$d1/$d2/$m/$y';
+          return '$d1/$d2.$m.$y';
         } else {
           final m2 = nextDay.month.toString().padLeft(2, '0');
-          return '$d1.$m/$d2.$m2/$y';
+          return '$d1.$m/$d2.$m2.$y';
         }
       } else {
         final d = dt.day.toString().padLeft(2, '0');

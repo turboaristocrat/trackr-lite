@@ -19,9 +19,14 @@ class StorageService {
   static const _readyStationKey = 'trackr_lite_ready_station';
   static const _stabledStationKey = 'trackr_lite_stabled_station';
   static const _notesKey = 'trackr_lite_notes';
-  static const _remarkTemplatesKey = 'trackr_lite_remark_templates';
+  static const _remarkTemplatesKey = 'trackr_lite_remark_templates_v2';
+  static const _legacyRemarkTemplatesKey = 'trackr_lite_remark_templates';
 
   static const List<String> defaultRemarkTemplates = [
+    'Kindly arrange one barrel diesel',
+  ];
+
+  static const List<String> _obsoleteDefaultTemplates = [
     'Diesel filled: ___ Ltrs at ___',
     'Track attended and fit for traffic.',
     'Caution order observed.',
@@ -35,10 +40,33 @@ class StorageService {
     if (raw != null) {
       try {
         final list = (jsonDecode(raw) as List<dynamic>).map((e) => e.toString()).toList();
-        if (list.isNotEmpty) return list;
+        // Return list even if empty, allowing the user to delete all templates completely
+        return list;
       } catch (_) {}
     }
-    return List<String>.from(defaultRemarkTemplates);
+
+    // Migration from legacy v1 storage if v2 is not yet initialized
+    final legacyRaw = prefs.getString(_legacyRemarkTemplatesKey);
+    if (legacyRaw != null) {
+      try {
+        final legacyList = (jsonDecode(legacyRaw) as List<dynamic>).map((e) => e.toString()).toList();
+        // Remove obsolete defaults, preserving only user custom templates
+        final customOnly = legacyList.where((t) {
+          final lower = t.toLowerCase();
+          return !_obsoleteDefaultTemplates.any((obs) => obs.toLowerCase() == lower) &&
+              !lower.startsWith('diesel filled:');
+        }).toList();
+
+        final migrated = customOnly.isNotEmpty ? customOnly : List<String>.from(defaultRemarkTemplates);
+        await saveRemarkTemplates(migrated);
+        return migrated;
+      } catch (_) {}
+    }
+
+    // Default initialization
+    final initial = List<String>.from(defaultRemarkTemplates);
+    await saveRemarkTemplates(initial);
+    return initial;
   }
 
   static Future<void> saveRemarkTemplates(List<String> templates) async {
@@ -55,6 +83,15 @@ class StorageService {
     }
   }
 
+  static Future<void> updateRemarkTemplate(int index, String newText) async {
+    final list = await getRemarkTemplates();
+    final trimmed = newText.trim();
+    if (index >= 0 && index < list.length && trimmed.isNotEmpty) {
+      list[index] = trimmed;
+      await saveRemarkTemplates(list);
+    }
+  }
+
   static Future<void> deleteRemarkTemplate(int index) async {
     final list = await getRemarkTemplates();
     if (index >= 0 && index < list.length) {
@@ -64,8 +101,7 @@ class StorageService {
   }
 
   static Future<void> resetRemarkTemplates() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_remarkTemplatesKey);
+    await saveRemarkTemplates(List<String>.from(defaultRemarkTemplates));
   }
 
   // --- Active Shift ---
