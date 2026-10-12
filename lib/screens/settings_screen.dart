@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import '../models/shift_log.dart';
 import '../services/backup_service.dart';
 import '../services/storage_service.dart';
+import '../services/web_launcher_stub.dart'
+    if (dart.library.js_interop) '../services/web_launcher_web.dart';
 import '../theme/app_theme.dart';
 import '../widgets/edit_shift_dialog.dart';
 import '../widgets/trackr_logo.dart';
@@ -18,6 +20,7 @@ class SettingsScreen extends StatefulWidget {
 
 class SettingsScreenState extends State<SettingsScreen> {
   ShiftLog? _activeShift;
+  List<String> _remarkTemplates = [];
   bool _isLoading = true;
 
   @override
@@ -29,9 +32,11 @@ class SettingsScreenState extends State<SettingsScreen> {
   Future<void> refreshSettings() async {
     setState(() => _isLoading = true);
     final shift = await StorageService.getActiveShift();
+    final templates = await StorageService.getRemarkTemplates();
     if (mounted) {
       setState(() {
         _activeShift = shift;
+        _remarkTemplates = templates;
         _isLoading = false;
       });
     }
@@ -44,6 +49,83 @@ class SettingsScreenState extends State<SettingsScreen> {
       await StorageService.saveActiveShift(updated);
       setState(() => _activeShift = updated);
       widget.onDataChanged?.call();
+    }
+  }
+
+  Future<void> _addNewTemplate() async {
+    final ctrl = TextEditingController();
+    final added = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.cardBg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.add_comment_rounded, color: AppTheme.primary, size: 20),
+            SizedBox(width: 8),
+            Text('Add Remark Template', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Enter a phrase or template. It will appear for 1-tap insertion in the shift remarks tab.',
+              style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: ctrl,
+              autofocus: true,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Template Text',
+                hintText: 'e.g. Engine oil topped up by 5 litres.',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+            child: const Text('Save Template'),
+          ),
+        ],
+      ),
+    );
+
+    if (added != null && added.isNotEmpty) {
+      await StorageService.addRemarkTemplate(added);
+      await refreshSettings();
+    }
+  }
+
+  Future<void> _deleteTemplate(int index) async {
+    await StorageService.deleteRemarkTemplate(index);
+    await refreshSettings();
+  }
+
+  Future<void> _resetTemplatesToDefault() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.cardBg,
+        title: const Text('Reset Templates?'),
+        content: const Text('Restore default railway remark templates? Custom templates will be reset.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Reset')),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      await StorageService.resetRemarkTemplates();
+      await refreshSettings();
     }
   }
 
@@ -209,8 +291,16 @@ class SettingsScreenState extends State<SettingsScreen> {
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
               children: [
+                // PWA Field App Install Card
+                _buildPwaInstallCard(),
+                const SizedBox(height: 14),
+
                 // Machine Profile Card
                 _buildMachineProfileCard(),
+                const SizedBox(height: 14),
+
+                // Shift Remark Templates Card
+                _buildRemarkTemplatesCard(),
                 const SizedBox(height: 18),
 
                 // Backup & Restore Section Header
@@ -242,6 +332,184 @@ class SettingsScreenState extends State<SettingsScreen> {
                 _buildAppInfoCard(),
               ],
             ),
+    );
+  }
+
+  Widget _buildPwaInstallCard() {
+    return Card(
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFDB324).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.install_mobile_rounded, color: Color(0xFF996800), size: 22),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Install Field App',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Install to home screen for 1-tap offline use',
+                    style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final accepted = await promptPwaInstall();
+                if (!accepted && mounted) {
+                  showDialog(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      backgroundColor: AppTheme.cardBg,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      title: const Row(
+                        children: [
+                          Icon(Icons.phone_android_rounded, color: AppTheme.primary, size: 22),
+                          SizedBox(width: 8),
+                          Text('Install TRACKR Lite', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      content: const Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('To install this app on your phone:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          SizedBox(height: 10),
+                          Text('📱 On Android (Chrome):\n1. Tap the three dots (⋮) menu in top right.\n2. Tap "Install app" or "Add to Home screen".', style: TextStyle(fontSize: 12.5, height: 1.4)),
+                          SizedBox(height: 10),
+                          Text('🍎 On iPhone (Safari):\n1. Tap the Share button (square with arrow) at bottom.\n2. Scroll and tap "Add to Home Screen".', style: TextStyle(fontSize: 12.5, height: 1.4)),
+                        ],
+                      ),
+                      actions: [
+                        ElevatedButton(onPressed: () => Navigator.pop(ctx), child: const Text('Got It')),
+                      ],
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFDB324),
+                foregroundColor: const Color(0xFF191C20),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                visualDensity: VisualDensity.compact,
+              ),
+              child: const Text('Install', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRemarkTemplatesCard() {
+    return Card(
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.amberAccent.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.bolt_rounded, color: AppTheme.amberAccent, size: 22),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Shift Remark Templates',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Quick phrases for 1-tap logging in remarks',
+                        style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _addNewTemplate,
+                  icon: const Icon(Icons.add, size: 15),
+                  label: const Text('Add', style: TextStyle(fontSize: 12)),
+                  style: OutlinedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            ..._remarkTemplates.asMap().entries.map((entry) {
+              final idx = entry.key;
+              final tpl = entry.value;
+              final isDiesel = tpl.toLowerCase().startsWith('diesel filled');
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppTheme.borderColor),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      isDiesel ? Icons.local_gas_station_rounded : Icons.notes_rounded,
+                      size: 16,
+                      color: isDiesel ? AppTheme.amberAccent : AppTheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        tpl,
+                        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline_rounded, size: 16, color: AppTheme.redDanger),
+                      visualDensity: VisualDensity.compact,
+                      tooltip: 'Delete Template',
+                      onPressed: () => _deleteTemplate(idx),
+                    ),
+                  ],
+                ),
+              );
+            }),
+            const SizedBox(height: 4),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: _resetTemplatesToDefault,
+                style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                child: const Text('Reset to Defaults', style: TextStyle(fontSize: 11.5, color: AppTheme.textSecondary)),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

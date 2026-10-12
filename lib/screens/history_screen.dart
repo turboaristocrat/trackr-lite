@@ -241,11 +241,15 @@ class HistoryScreenState extends State<HistoryScreen> {
 
   Widget _buildHistoryCard(ShiftLog log) {
     String displayDate;
-    try {
-      final dt = DateTime.parse(log.date);
-      displayDate = DateFormat('EEE, dd MMM yyyy').format(dt);
-    } catch (_) {
-      displayDate = log.date;
+    if (log.isNightShift) {
+      displayDate = '${log.formattedDate} (Night)';
+    } else {
+      try {
+        final dt = DateTime.parse(log.date);
+        displayDate = DateFormat('EEE, dd MMM yyyy').format(dt);
+      } catch (_) {
+        displayDate = log.date;
+      }
     }
 
     return Card(

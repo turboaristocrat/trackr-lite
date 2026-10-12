@@ -6,3 +6,5 @@ Future<bool> triggerWebShare(String title, String text) async => false;
 void openExternalUriDirect(String uri) {
   // No-op or native handling
 }
+
+Future<bool> promptPwaInstall() async => false;

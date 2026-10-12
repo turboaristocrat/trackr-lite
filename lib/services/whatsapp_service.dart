@@ -1,23 +1,16 @@
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/shift_log.dart';
 
 class WhatsAppService {
   static String formatReport(ShiftLog log) {
-    String formattedDate;
-    try {
-      final parsed = DateTime.parse(log.date);
-      formattedDate = DateFormat('dd-MM-yyyy').format(parsed);
-    } catch (_) {
-      formattedDate = log.date;
-    }
+    final formattedDate = log.formattedDate;
 
     final buffer = StringBuffer();
     buffer.writeln('*TRACKR LITE SHIFT REPORT*');
     buffer.writeln('--------------------------------');
-    buffer.writeln('📅 *Date:* $formattedDate');
+    buffer.writeln('📅 *Date:* $formattedDate${log.isNightShift ? " (Night Shift)" : ""}');
     buffer.writeln('🚜 *Machine:* ${log.machineType} ${log.machineNo}');
     buffer.writeln('📍 *Div / Sec:* ${log.division} / ${log.section}');
     if (log.remarks.trim().isNotEmpty) {

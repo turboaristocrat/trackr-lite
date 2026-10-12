@@ -153,6 +153,42 @@ void main() {
       final restored = ShiftLog.fromJson(json);
       expect(restored.remarks, log.remarks);
     });
+
+    test('Formats night shift date as dual dates (e.g. 12/13/10/2026)', () {
+      const dayLog = ShiftLog(
+        date: '2026-10-12',
+        machineName: 'UTV005H',
+        division: 'TVC',
+        section: 'KTYM',
+        isNightShift: false,
+        blocks: [],
+      );
+      expect(dayLog.formattedDate, '12.10.2026');
+
+      const nightLog = ShiftLog(
+        date: '2026-10-12',
+        machineName: 'UTV005H',
+        division: 'TVC',
+        section: 'KTYM',
+        isNightShift: true,
+        blocks: [],
+      );
+      expect(nightLog.formattedDate, '12/13/10/2026');
+
+      final report = ReportService.formatReport(nightLog);
+      expect(report, contains('Progress of UTV005H on 12/13/10/2026'));
+
+      // Month crossing check (e.g. Oct 31 to Nov 01)
+      const monthEndLog = ShiftLog(
+        date: '2026-10-31',
+        machineName: 'UTV005H',
+        division: 'TVC',
+        section: 'KTYM',
+        isNightShift: true,
+        blocks: [],
+      );
+      expect(monthEndLog.formattedDate, '31.10/01.11/2026');
+    });
   });
 
   group('StorageService', () {
@@ -223,6 +259,20 @@ void main() {
       expect(fresh.totalBlockOutput, 0.0);
       expect(history, isEmpty);
       expect(notes, isEmpty);
+    });
+
+    test('Saves, loads, and manages remark templates', () async {
+      final initial = await StorageService.getRemarkTemplates();
+      expect(initial, contains('Diesel filled: ___ Ltrs at ___'));
+
+      await StorageService.addRemarkTemplate('Custom Track Template #1');
+      var updated = await StorageService.getRemarkTemplates();
+      expect(updated, contains('Custom Track Template #1'));
+
+      final idx = updated.indexOf('Custom Track Template #1');
+      await StorageService.deleteRemarkTemplate(idx);
+      updated = await StorageService.getRemarkTemplates();
+      expect(updated, isNot(contains('Custom Track Template #1')));
     });
   });
 }

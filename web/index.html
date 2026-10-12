@@ -21,8 +21,111 @@
 
   <title>TRACKR Lite</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    #pwa-install-banner {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      left: 16px;
+      right: 16px;
+      max-width: 420px;
+      margin: 0 auto;
+      background: #191C20;
+      color: #F8FAFC;
+      border: 1px solid #334155;
+      border-radius: 14px;
+      padding: 12px 14px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.45);
+      z-index: 99999;
+      align-items: center;
+      justify-content: space-between;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    #pwa-install-btn {
+      background: #FDB324;
+      color: #191C20;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    #pwa-close-btn {
+      background: transparent;
+      border: none;
+      color: #94A3B8;
+      font-size: 18px;
+      margin-left: 8px;
+      cursor: pointer;
+      padding: 4px;
+    }
+  </style>
 </head>
 <body style="background-color: #0F172A; margin: 0; padding: 0;">
+  <!-- Native PWA Install Banner -->
+  <div id="pwa-install-banner">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <img src="icons/Icon-192.png" style="width: 36px; height: 36px; border-radius: 8px;" alt="Logo" />
+      <div>
+        <div style="font-weight: 700; font-size: 13.5px;">Install TRACKR Lite</div>
+        <div style="font-size: 11.5px; color: #94A3B8;">Tap to install as field app</div>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center;">
+      <button id="pwa-install-btn" onclick="window.triggerPwaInstall()">Install</button>
+      <button id="pwa-close-btn" onclick="document.getElementById('pwa-install-banner').style.display='none'">✕</button>
+    </div>
+  </div>
+
+  <script>
+    // Explicit Service Worker Registration
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('flutter_service_worker.js');
+      });
+    }
+
+    // PWA Install Prompt Capture
+    window.deferredPwaPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      window.deferredPwaPrompt = e;
+      const banner = document.getElementById('pwa-install-banner');
+      if (banner && !window.matchMedia('(display-mode: standalone)').matches) {
+        banner.style.display = 'flex';
+      }
+    });
+
+    window.triggerPwaInstall = async function() {
+      if (window.deferredPwaPrompt) {
+        window.deferredPwaPrompt.prompt();
+        const { outcome } = await window.deferredPwaPrompt.userChoice;
+        if (outcome === 'accepted') {
+          const banner = document.getElementById('pwa-install-banner');
+          if (banner) banner.style.display = 'none';
+        }
+        window.deferredPwaPrompt = null;
+        return outcome === 'accepted';
+      } else {
+        // Fallback for iOS or already installed / standalone
+        const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        if (isIos) {
+          alert("To install TRACKR Lite on your iPhone/iPad:\n1. Tap the Share icon (square with arrow) at the bottom.\n2. Tap 'Add to Home Screen'.");
+        } else {
+          alert("To install TRACKR Lite, tap your browser's menu (three dots) and select 'Install app' or 'Add to Home Screen'.");
+        }
+      }
+      return false;
+    };
+
+    window.addEventListener('appinstalled', () => {
+      window.deferredPwaPrompt = null;
+      const banner = document.getElementById('pwa-install-banner');
+      if (banner) banner.style.display = 'none';
+    });
+  </script>
+
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

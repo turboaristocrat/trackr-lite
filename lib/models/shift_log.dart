@@ -11,6 +11,7 @@ class ShiftLog {
   final String stabledStation;
   final String stabledTime;
   final String remarks;
+  final bool isNightShift;
   final List<BlockEntry> blocks;
   final List<ReminderItem> reminders;
 
@@ -24,9 +25,38 @@ class ShiftLog {
     this.stabledStation = '',
     this.stabledTime = '',
     this.remarks = '',
+    this.isNightShift = false,
     required this.blocks,
     this.reminders = const [],
   });
+
+  /// Formatted date string, handling single day (dd.MM.yyyy)
+  /// and night shifts spanning across two days (e.g. 12/13/10/2026)
+  String get formattedDate {
+    try {
+      final dt = DateTime.parse(date);
+      if (isNightShift) {
+        final nextDay = dt.add(const Duration(days: 1));
+        final d1 = dt.day.toString().padLeft(2, '0');
+        final d2 = nextDay.day.toString().padLeft(2, '0');
+        final m = dt.month.toString().padLeft(2, '0');
+        final y = dt.year.toString();
+        if (dt.month == nextDay.month) {
+          return '$d1/$d2/$m/$y';
+        } else {
+          final m2 = nextDay.month.toString().padLeft(2, '0');
+          return '$d1.$m/$d2.$m2/$y';
+        }
+      } else {
+        final d = dt.day.toString().padLeft(2, '0');
+        final m = dt.month.toString().padLeft(2, '0');
+        final y = dt.year.toString();
+        return '$d.$m.$y';
+      }
+    } catch (_) {
+      return date;
+    }
+  }
 
   // Backward compatibility getters
   String get machineType => machineName;
@@ -69,6 +99,7 @@ class ShiftLog {
     'stabledStation': stabledStation,
     'stabledTime': stabledTime,
     'remarks': remarks,
+    'isNightShift': isNightShift,
     'blocks': blocks.map((b) => b.toJson()).toList(),
     'reminders': reminders.map((r) => r.toJson()).toList(),
   };
@@ -96,6 +127,7 @@ class ShiftLog {
       stabledStation: json['stabledStation'] as String? ?? '',
       stabledTime: json['stabledTime'] as String? ?? '',
       remarks: json['remarks'] as String? ?? '',
+      isNightShift: json['isNightShift'] as bool? ?? false,
       blocks: (json['blocks'] as List<dynamic>?)
               ?.map((e) => BlockEntry.fromJson(e as Map<String, dynamic>))
               .toList() ??
@@ -114,6 +146,7 @@ class ShiftLog {
     String? stabledStation,
     String? stabledTime,
     String? remarks,
+    bool? isNightShift,
     List<BlockEntry>? blocks,
     List<ReminderItem>? reminders,
   }) {
@@ -127,6 +160,7 @@ class ShiftLog {
       stabledStation: stabledStation ?? this.stabledStation,
       stabledTime: stabledTime ?? this.stabledTime,
       remarks: remarks ?? this.remarks,
+      isNightShift: isNightShift ?? this.isNightShift,
       blocks: blocks ?? this.blocks,
       reminders: reminders ?? this.reminders,
     );

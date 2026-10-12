@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/shift_log.dart';
@@ -10,13 +9,7 @@ import 'web_launcher_stub.dart'
 
 class ReportService {
   static String formatReport(ShiftLog log) {
-    String formattedDate;
-    try {
-      final parsed = DateTime.parse(log.date);
-      formattedDate = DateFormat('dd.MM.yyyy').format(parsed);
-    } catch (_) {
-      formattedDate = log.date;
-    }
+    final formattedDate = log.formattedDate;
 
     final machineTitle = log.machineName.replaceAll(' ', '').trim();
 
@@ -115,7 +108,7 @@ class ReportService {
       await Clipboard.setData(ClipboardData(text: text));
     } catch (_) {}
 
-    final subject = 'Progress of ${log.machineName} on ${log.date}';
+    final subject = 'Progress of ${log.machineName} on ${log.formattedDate}';
 
     // 1. On Web: Use native navigator.share if available.
     // This allows the user to select Telegram from the OS share list,
@@ -180,7 +173,7 @@ class ReportService {
     // Fallback to standard system share
     try {
       // ignore: deprecated_member_use
-      await Share.share(text, subject: 'Progress of ${log.machineName} on ${log.date}');
+      await Share.share(text, subject: 'Progress of ${log.machineName} on ${log.formattedDate}');
     } catch (_) {}
   }
 

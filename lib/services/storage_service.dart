@@ -19,6 +19,54 @@ class StorageService {
   static const _readyStationKey = 'trackr_lite_ready_station';
   static const _stabledStationKey = 'trackr_lite_stabled_station';
   static const _notesKey = 'trackr_lite_notes';
+  static const _remarkTemplatesKey = 'trackr_lite_remark_templates';
+
+  static const List<String> defaultRemarkTemplates = [
+    'Diesel filled: ___ Ltrs at ___',
+    'Track attended and fit for traffic.',
+    'Caution order observed.',
+    'Machine under maintenance / inspection.',
+  ];
+
+  // --- Remark Templates ---
+  static Future<List<String>> getRemarkTemplates() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_remarkTemplatesKey);
+    if (raw != null) {
+      try {
+        final list = (jsonDecode(raw) as List<dynamic>).map((e) => e.toString()).toList();
+        if (list.isNotEmpty) return list;
+      } catch (_) {}
+    }
+    return List<String>.from(defaultRemarkTemplates);
+  }
+
+  static Future<void> saveRemarkTemplates(List<String> templates) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_remarkTemplatesKey, jsonEncode(templates));
+  }
+
+  static Future<void> addRemarkTemplate(String template) async {
+    final list = await getRemarkTemplates();
+    final trimmed = template.trim();
+    if (trimmed.isNotEmpty && !list.contains(trimmed)) {
+      list.add(trimmed);
+      await saveRemarkTemplates(list);
+    }
+  }
+
+  static Future<void> deleteRemarkTemplate(int index) async {
+    final list = await getRemarkTemplates();
+    if (index >= 0 && index < list.length) {
+      list.removeAt(index);
+      await saveRemarkTemplates(list);
+    }
+  }
+
+  static Future<void> resetRemarkTemplates() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_remarkTemplatesKey);
+  }
 
   // --- Active Shift ---
   static Future<ShiftLog> getActiveShift() async {
@@ -189,6 +237,7 @@ class StorageService {
       'activeShift': active.toJson(),
       'history': history.map((h) => h.toJson()).toList(),
       'notes': notes.map((n) => n.toJson()).toList(),
+      'remarkTemplates': await getRemarkTemplates(),
     };
     return const JsonEncoder.withIndent('  ').convert(map);
   }
@@ -224,6 +273,13 @@ class StorageService {
             .map((e) => ReminderItem.fromJson(e as Map<String, dynamic>))
             .toList();
         await saveNotes(notesList);
+      }
+
+      if (map['remarkTemplates'] != null) {
+        final templatesList = (map['remarkTemplates'] as List<dynamic>)
+            .map((e) => e.toString())
+            .toList();
+        await saveRemarkTemplates(templatesList);
       }
 
       return true;

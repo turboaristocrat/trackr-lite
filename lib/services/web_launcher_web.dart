@@ -33,3 +33,19 @@ void openExternalUriDirect(String uri) {
   anchor.click();
   anchor.remove();
 }
+
+Future<bool> promptPwaInstall() async {
+  try {
+    final win = web.window as JSObject;
+    if (win.has('triggerPwaInstall')) {
+      final res = win.callMethod('triggerPwaInstall'.toJS);
+      if (res.isA<JSPromise>()) {
+        final outcome = await (res as JSPromise).toDart;
+        if (outcome.isA<JSBoolean>()) {
+          return (outcome as JSBoolean).toDart;
+        }
+      }
+    }
+  } catch (_) {}
+  return false;
+}

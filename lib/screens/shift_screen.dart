@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../models/block_entry.dart';
 import '../models/shift_log.dart';
 import '../services/report_service.dart';
@@ -10,6 +9,7 @@ import '../widgets/edit_machine_ready_dialog.dart';
 import '../widgets/edit_machine_stabled_dialog.dart';
 import '../widgets/edit_shift_dialog.dart';
 import '../widgets/edit_shift_remarks_dialog.dart';
+import '../widgets/select_date_shift_dialog.dart';
 
 class ShiftScreen extends StatefulWidget {
   final VoidCallback onShiftCompleted;
@@ -87,9 +87,18 @@ class ShiftScreenState extends State<ShiftScreen> {
       initialTime: _shift!.readyTime,
     );
     if (res != null) {
+      final time = res['time'] as String;
+      bool isNight = _shift!.isNightShift;
+      if (time.isNotEmpty && time.contains(':')) {
+        final hour = int.tryParse(time.split(':')[0]) ?? 12;
+        if (hour >= 18 || hour < 6) {
+          isNight = true;
+        }
+      }
       await _saveShift(_shift!.copyWith(
         readyStation: res['station'],
-        readyTime: res['time'],
+        readyTime: time,
+        isNightShift: isNight,
       ));
     }
   }
@@ -124,32 +133,22 @@ class ShiftScreenState extends State<ShiftScreen> {
 
   Future<void> _pickDate() async {
     if (_shift == null) return;
-    DateTime current;
-    try {
-      current = DateTime.parse(_shift!.date);
-    } catch (_) {
-      current = DateTime.now();
-    }
-
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: current,
-      firstDate: DateTime(2024),
-      lastDate: DateTime(2030),
-      builder: (context, child) => Theme(
-        data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.light(
-            primary: AppTheme.primary,
-            surface: AppTheme.cardBg,
-          ),
-        ),
-        child: child!,
-      ),
+    final res = await SelectDateShiftDialog.show(
+      context,
+      initialDate: _shift!.date,
+      initialIsNightShift: _shift!.isNightShift,
+      initialTime: _shift!.readyTime,
     );
 
-    if (picked != null) {
-      final dateStr = DateFormat('yyyy-MM-dd').format(picked);
-      await _saveShift(_shift!.copyWith(date: dateStr));
+    if (res != null) {
+      final date = res['date'] as String;
+      final isNight = res['isNightShift'] as bool;
+      final time = res['time'] as String;
+      await _saveShift(_shift!.copyWith(
+        date: date,
+        isNightShift: isNight,
+        readyTime: time.isNotEmpty ? time : _shift!.readyTime,
+      ));
     }
   }
 
@@ -243,13 +242,7 @@ class ShiftScreenState extends State<ShiftScreen> {
     }
 
     final shift = _shift!;
-    String displayDate;
-    try {
-      final dt = DateTime.parse(shift.date);
-      displayDate = DateFormat('dd.MM.yyyy').format(dt);
-    } catch (_) {
-      displayDate = shift.date;
-    }
+    final displayDate = shift.formattedDate;
 
     int blockCounter = 1;
 
@@ -274,7 +267,7 @@ class ShiftScreenState extends State<ShiftScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top Row: Date Chip, Machine Badge, Large Report Button
+              // Top Row: Date Chip, Day/Night Toggle, Machine Badge, Large Report Button
               Row(
                 children: [
                   // Date Chip
@@ -284,21 +277,78 @@ class ShiftScreenState extends State<ShiftScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
                       decoration: BoxDecoration(
-                        color: AppTheme.surfaceContainerLow,
+                        color: shift.isNightShift
+                            ? const Color(0xFF6750A4).withValues(alpha: 0.1)
+                            : AppTheme.surfaceContainerLow,
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppTheme.borderColor),
+                        border: Border.all(
+                          color: shift.isNightShift
+                              ? const Color(0xFF6750A4).withValues(alpha: 0.35)
+                              : AppTheme.borderColor,
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.calendar_today_rounded, size: 14, color: AppTheme.primary),
+                          Icon(
+                            shift.isNightShift ? Icons.nightlight_round : Icons.calendar_today_rounded,
+                            size: 14,
+                            color: shift.isNightShift ? const Color(0xFF6750A4) : AppTheme.primary,
+                          ),
                           const SizedBox(width: 6),
-                          Text(displayDate, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                          Text(
+                            displayDate,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: shift.isNightShift ? const Color(0xFF6750A4) : AppTheme.textPrimary,
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
+
+                  // Day / Night Quick Toggle Pill
+                  InkWell(
+                    onTap: () => _saveShift(shift.copyWith(isNightShift: !shift.isNightShift)),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6.5),
+                      decoration: BoxDecoration(
+                        color: shift.isNightShift
+                            ? const Color(0xFF6750A4).withValues(alpha: 0.12)
+                            : const Color(0xFFFDB324).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: shift.isNightShift
+                              ? const Color(0xFF6750A4).withValues(alpha: 0.35)
+                              : const Color(0xFFD69400).withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            shift.isNightShift ? Icons.nights_stay_rounded : Icons.wb_sunny_rounded,
+                            size: 13,
+                            color: shift.isNightShift ? const Color(0xFF6750A4) : const Color(0xFF996800),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            shift.isNightShift ? 'Night' : 'Day',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11.5,
+                              color: shift.isNightShift ? const Color(0xFF6750A4) : const Color(0xFF996800),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
 
                   // Machine Badge
                   InkWell(
