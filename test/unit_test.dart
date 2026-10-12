@@ -314,12 +314,74 @@ void main() {
 
       await StorageService.saveActiveShift(pastDateShift);
 
-      // Fetching active shift on a different day must preserve user's data
+      // Fetching active shift on a different day must preserve user's data and auto-save it to history
       final retrieved = await StorageService.getActiveShift();
       expect(retrieved.blocks.length, 1);
       expect(retrieved.remarks, 'Night work in progress');
       expect(retrieved.blocks.first.items.first.output, 120);
       expect(retrieved.isNightShift, isTrue);
+
+      // Verify it was auto-saved to history datewise
+      final savedHistory = await StorageService.getHistory();
+      expect(savedHistory.any((h) => h.date == '2026-10-10'), isTrue);
+    });
+
+    test('Sorts history datewise and looks up by date and night shift', () async {
+      await StorageService.resetAllData();
+
+      const shiftOct10 = ShiftLog(
+        date: '2026-10-10',
+        machineName: 'UTV005H',
+        division: 'TVC',
+        section: 'KTYM',
+        blocks: [],
+      );
+      const shiftOct12 = ShiftLog(
+        date: '2026-10-12',
+        machineName: 'UTV005H',
+        division: 'TVC',
+        section: 'KTYM',
+        blocks: [],
+      );
+      const shiftOct11 = ShiftLog(
+        date: '2026-10-11',
+        machineName: 'UTV005H',
+        division: 'TVC',
+        section: 'KTYM',
+        blocks: [],
+      );
+      const shiftOct12Night = ShiftLog(
+        date: '2026-10-12',
+        machineName: 'UTV005H',
+        division: 'TVC',
+        section: 'KTYM',
+        isNightShift: true,
+        blocks: [],
+      );
+
+      await StorageService.saveOrUpdateHistoryShift(shiftOct10);
+      await StorageService.saveOrUpdateHistoryShift(shiftOct12);
+      await StorageService.saveOrUpdateHistoryShift(shiftOct11);
+      await StorageService.saveOrUpdateHistoryShift(shiftOct12Night);
+
+      final history = await StorageService.getHistory();
+      expect(history.length, 4);
+      // Datewise order: 2026-10-12 (night), 2026-10-12 (day), 2026-10-11, 2026-10-10
+      expect(history[0].date, '2026-10-12');
+      expect(history[0].isNightShift, isTrue);
+      expect(history[1].date, '2026-10-12');
+      expect(history[1].isNightShift, isFalse);
+      expect(history[2].date, '2026-10-11');
+      expect(history[3].date, '2026-10-10');
+
+      // Test getHistoryShiftForDate
+      final foundOct11 = await StorageService.getHistoryShiftForDate('2026-10-11');
+      expect(foundOct11, isNotNull);
+      expect(foundOct11!.date, '2026-10-11');
+
+      final foundNight = await StorageService.getHistoryShiftForDate('2026-10-12', isNightShift: true);
+      expect(foundNight, isNotNull);
+      expect(foundNight!.isNightShift, isTrue);
     });
   });
 }

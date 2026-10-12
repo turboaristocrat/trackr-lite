@@ -8,7 +8,9 @@ import '../services/storage_service.dart';
 import '../theme/app_theme.dart';
 
 class HistoryScreen extends StatefulWidget {
-  const HistoryScreen({super.key});
+  final ValueChanged<ShiftLog>? onSelectShift;
+
+  const HistoryScreen({super.key, this.onSelectShift});
 
   @override
   State<HistoryScreen> createState() => HistoryScreenState();
@@ -35,7 +37,7 @@ class HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
-  Future<void> _deleteShift(String date) async {
+  Future<void> _deleteShift(String date, {bool? isNightShift}) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -57,7 +59,7 @@ class HistoryScreenState extends State<HistoryScreen> {
     );
 
     if (confirm == true) {
-      await StorageService.deleteHistoryItem(date);
+      await StorageService.deleteHistoryItem(date, isNightShift: isNightShift);
       await refreshHistory();
     }
   }
@@ -94,6 +96,16 @@ class HistoryScreenState extends State<HistoryScreen> {
               }
             },
           ),
+          if (widget.onSelectShift != null)
+            TextButton.icon(
+              icon: const Icon(Icons.edit_note_rounded, size: 16, color: AppTheme.primary),
+              label: const Text('Edit in Active Shift', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)),
+              onPressed: () async {
+                Navigator.pop(ctx);
+                await StorageService.saveActiveShift(log);
+                widget.onSelectShift?.call(log);
+              },
+            ),
           IconButton(
             icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18, color: AppTheme.whatsAppGreen),
             tooltip: 'WhatsApp',
@@ -229,7 +241,7 @@ class HistoryScreenState extends State<HistoryScreen> {
             ),
             const SizedBox(height: 6),
             const Text(
-              'When you tap "Complete & Archive Shift" on the Active Shift screen, your log will appear here.',
+              'Your shifts are automatically saved here datewise as you log blocks or share reports.',
               textAlign: TextAlign.center,
               style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.4),
             ),
@@ -283,6 +295,16 @@ class HistoryScreenState extends State<HistoryScreen> {
                     style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary, fontSize: 13.5),
                   ),
                   const Spacer(),
+                  if (widget.onSelectShift != null)
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined, size: 18, color: AppTheme.primary),
+                      visualDensity: VisualDensity.compact,
+                      tooltip: 'Edit in Active Shift',
+                      onPressed: () async {
+                        await StorageService.saveActiveShift(log);
+                        widget.onSelectShift?.call(log);
+                      },
+                    ),
                   IconButton(
                     icon: const Icon(Icons.send_rounded, size: 18, color: AppTheme.telegramBlue),
                     visualDensity: VisualDensity.compact,
@@ -299,7 +321,7 @@ class HistoryScreenState extends State<HistoryScreen> {
                     icon: const Icon(Icons.delete_outline_rounded, size: 18, color: AppTheme.redDanger),
                     visualDensity: VisualDensity.compact,
                     tooltip: 'Delete Log',
-                    onPressed: () => _deleteShift(log.date),
+                    onPressed: () => _deleteShift(log.date, isNightShift: log.isNightShift),
                   ),
                 ],
               ),

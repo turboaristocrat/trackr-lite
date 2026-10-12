@@ -122,6 +122,11 @@ class StorageService {
             log.stabledTime.trim().isNotEmpty ||
             log.isNightShift;
 
+        // At end of day rollover, cross-check and auto-save previous day's shift data to history datewise
+        if (log.date != today && hasActiveData) {
+          await saveOrUpdateHistoryShift(log);
+        }
+
         if (log.date == today || hasActiveData) {
           return log;
         }
@@ -180,7 +185,7 @@ class StorageService {
     }
   }
 
-  /// Saves or updates the current shift in History.
+  /// Saves or updates the current shift in History datewise.
   /// Does NOT clear the active shift, so user can keep editing if they want.
   /// If the shift for this date already exists in history:
   /// - If content is identical: returns [SaveHistoryResult.noChanges]
@@ -190,7 +195,7 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     final history = await getHistory();
 
-    final existingIndex = history.indexWhere((h) => h.date == log.date);
+    final existingIndex = history.indexWhere((h) => h.date == log.date && h.isNightShift == log.isNightShift);
     if (existingIndex != -1) {
       final existingJson = jsonEncode(history[existingIndex].toJson());
       final currentJson = jsonEncode(log.toJson());
@@ -199,26 +204,37 @@ class StorageService {
         return SaveHistoryResult.noChanges;
       }
 
-      // Update existing history entry
+      // Update existing history entry with cross-checked changes
       history[existingIndex] = log;
+      _sortHistoryDatewise(history);
       final rawList = history.map((h) => h.toJson()).toList();
       await prefs.setString(_historyKey, jsonEncode(rawList));
       return SaveHistoryResult.updated;
     } else {
       // New shift entry in history
       history.insert(0, log);
+      _sortHistoryDatewise(history);
       final rawList = history.map((h) => h.toJson()).toList();
       await prefs.setString(_historyKey, jsonEncode(rawList));
       return SaveHistoryResult.savedNew;
     }
   }
 
+  static void _sortHistoryDatewise(List<ShiftLog> list) {
+    list.sort((a, b) {
+      final cmp = b.date.compareTo(a.date);
+      if (cmp != 0) return cmp;
+      return (b.isNightShift ? 1 : 0).compareTo(a.isNightShift ? 1 : 0);
+    });
+  }
+
   static Future<void> completeAndArchiveShift(ShiftLog log) async {
     final prefs = await SharedPreferences.getInstance();
     final history = await getHistory();
 
-    history.removeWhere((h) => h.date == log.date);
+    history.removeWhere((h) => h.date == log.date && h.isNightShift == log.isNightShift);
     history.insert(0, log);
+    _sortHistoryDatewise(history);
 
     final rawList = history.map((h) => h.toJson()).toList();
     await prefs.setString(_historyKey, jsonEncode(rawList));
@@ -232,16 +248,35 @@ class StorageService {
     if (raw == null) return [];
     try {
       final list = jsonDecode(raw) as List<dynamic>;
-      return list.map((e) => ShiftLog.fromJson(e as Map<String, dynamic>)).toList();
+      final history = list.map((e) => ShiftLog.fromJson(e as Map<String, dynamic>)).toList();
+      _sortHistoryDatewise(history);
+      return history;
     } catch (_) {
       return [];
     }
   }
 
-  static Future<void> deleteHistoryItem(String date) async {
+  static Future<ShiftLog?> getHistoryShiftForDate(String date, {bool? isNightShift}) async {
+    final history = await getHistory();
+    try {
+      if (isNightShift != null) {
+        return history.firstWhere((h) => h.date == date && h.isNightShift == isNightShift);
+      }
+      return history.firstWhere((h) => h.date == date);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<void> deleteHistoryItem(String date, {bool? isNightShift}) async {
     final prefs = await SharedPreferences.getInstance();
     final history = await getHistory();
-    history.removeWhere((h) => h.date == date);
+    if (isNightShift != null) {
+      history.removeWhere((h) => h.date == date && h.isNightShift == isNightShift);
+    } else {
+      history.removeWhere((h) => h.date == date);
+    }
+    _sortHistoryDatewise(history);
     final rawList = history.map((h) => h.toJson()).toList();
     await prefs.setString(_historyKey, jsonEncode(rawList));
   }

@@ -65,7 +65,13 @@ class _MainScaffoldState extends State<MainScaffold> {
             },
           ),
           NotesScreen(key: _notesKey),
-          HistoryScreen(key: _historyKey),
+          HistoryScreen(
+            key: _historyKey,
+            onSelectShift: (shift) {
+              setState(() => _currentIndex = 0);
+              _shiftKey.currentState?.refreshShift();
+            },
+          ),
           SettingsScreen(
             key: _settingsKey,
             onDataChanged: _onDataChanged,

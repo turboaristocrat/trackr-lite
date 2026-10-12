@@ -44,6 +44,15 @@ class ShiftScreenState extends State<ShiftScreen> {
   Future<void> _saveShift(ShiftLog updated) async {
     setState(() => _shift = updated);
     await StorageService.saveActiveShift(updated);
+
+    // Auto-save & cross-check to history datewise if shift has any logged activity
+    final hasData = updated.blocks.isNotEmpty ||
+        updated.remarks.trim().isNotEmpty ||
+        updated.stabledStation.trim().isNotEmpty;
+    if (hasData) {
+      await StorageService.saveOrUpdateHistoryShift(updated);
+      widget.onShiftCompleted();
+    }
   }
 
   Future<void> _addOrEditBlock({BlockEntry? existing, bool isTransit = false}) async {
@@ -144,11 +153,36 @@ class ShiftScreenState extends State<ShiftScreen> {
       final date = res['date'] as String;
       final isNight = res['isNightShift'] as bool;
       final time = res['time'] as String;
-      await _saveShift(_shift!.copyWith(
-        date: date,
-        isNightShift: isNight,
-        readyTime: time.isNotEmpty ? time : _shift!.readyTime,
-      ));
+
+      // Cross-check & auto-save current shift to history if user changes date or night shift
+      final currentHasData = _shift!.blocks.isNotEmpty ||
+          _shift!.remarks.trim().isNotEmpty ||
+          _shift!.stabledStation.trim().isNotEmpty;
+      if (currentHasData && (_shift!.date != date || _shift!.isNightShift != isNight)) {
+        await StorageService.saveOrUpdateHistoryShift(_shift!);
+        widget.onShiftCompleted();
+      }
+
+      // If a shift already exists in history for the selected date, load it!
+      final existingForDate = await StorageService.getHistoryShiftForDate(date, isNightShift: isNight);
+      if (existingForDate != null) {
+        await _saveShift(existingForDate);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Loaded saved shift for $date from History'),
+              backgroundColor: AppTheme.secondary,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        await _saveShift(_shift!.copyWith(
+          date: date,
+          isNightShift: isNight,
+          readyTime: time.isNotEmpty ? time : _shift!.readyTime,
+        ));
+      }
     }
   }
 
@@ -181,9 +215,14 @@ class ShiftScreenState extends State<ShiftScreen> {
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.telegramBlue),
             icon: const Icon(Icons.send_rounded, size: 16),
             label: const Text('Telegram'),
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              ReportService.shareToTelegram(_shift!);
+              if (_shift != null) {
+                // Cross-check & auto-save to history datewise
+                await StorageService.saveOrUpdateHistoryShift(_shift!);
+                widget.onShiftCompleted();
+                await ReportService.shareToTelegram(_shift!);
+              }
             },
           ),
         ],
@@ -1007,7 +1046,25 @@ class ShiftScreenState extends State<ShiftScreen> {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                 ),
-                onPressed: () => ReportService.shareToWhatsApp(shift),
+                onPressed: () async {
+                  // Cross-check for changes and auto-save to history datewise
+                  SaveHistoryResult? result;
+                  if (shift.blocks.isNotEmpty || shift.remarks.isNotEmpty || shift.stabledStation.isNotEmpty) {
+                    result = await StorageService.saveOrUpdateHistoryShift(shift);
+                    widget.onShiftCompleted();
+                  }
+                  await ReportService.shareToWhatsApp(shift);
+                  if (mounted && result != null && result != SaveHistoryResult.noChanges) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(result == SaveHistoryResult.updated
+                            ? 'Opening WhatsApp (History updated with latest changes)'
+                            : 'Opening WhatsApp (Shift auto-saved to History)'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                },
               ),
             ),
             const SizedBox(width: 8),
@@ -1030,12 +1087,24 @@ class ShiftScreenState extends State<ShiftScreen> {
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                 ),
                 onPressed: () async {
+                  // Cross-check for changes and auto-save to history datewise
+                  SaveHistoryResult? result;
+                  if (shift.blocks.isNotEmpty || shift.remarks.isNotEmpty || shift.stabledStation.isNotEmpty) {
+                    result = await StorageService.saveOrUpdateHistoryShift(shift);
+                    widget.onShiftCompleted();
+                  }
                   await ReportService.shareToTelegram(shift);
                   if (mounted) {
+                    String msg = 'Opening Telegram (Report also copied to clipboard)';
+                    if (result == SaveHistoryResult.updated) {
+                      msg = 'Opening Telegram (History updated with latest changes)';
+                    } else if (result == SaveHistoryResult.savedNew) {
+                      msg = 'Opening Telegram (Shift auto-saved to History)';
+                    }
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Opening Telegram (Report also copied to clipboard)'),
-                        duration: Duration(seconds: 2),
+                      SnackBar(
+                        content: Text(msg),
+                        duration: const Duration(seconds: 2),
                       ),
                     );
                   }
@@ -1055,10 +1124,14 @@ class ShiftScreenState extends State<ShiftScreen> {
               icon: const Icon(Icons.copy_rounded, size: 18),
               tooltip: 'Copy Report Text',
               onPressed: () async {
+                if (shift.blocks.isNotEmpty || shift.remarks.isNotEmpty || shift.stabledStation.isNotEmpty) {
+                  await StorageService.saveOrUpdateHistoryShift(shift);
+                  widget.onShiftCompleted();
+                }
                 await ReportService.copyToClipboard(shift);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Shift report copied to clipboard!')),
+                    const SnackBar(content: Text('Shift report copied & saved to History!')),
                   );
                 }
               },
