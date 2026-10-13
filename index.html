@@ -135,7 +135,7 @@
     // Explicit Service Worker Registration with Immediate Auto-Update
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('flutter_service_worker.js?v=437883267') /* Flutter's service worker is deprecated and will be removed in a future Flutter release. */.then(function (reg) {
+        navigator.serviceWorker.register('flutter_service_worker.js?v=3213821667') /* Flutter's service worker is deprecated and will be removed in a future Flutter release. */.then(function (reg) {
           reg.update();
           reg.onupdatefound = function () {
             const installing = reg.installing;
