@@ -1,7 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trackr_lite/models/block_entry.dart';
+import 'package:trackr_lite/models/movement_entry.dart';
 import 'package:trackr_lite/models/shift_log.dart';
+import 'package:trackr_lite/services/movement_service.dart';
 import 'package:trackr_lite/services/report_service.dart';
 import 'package:trackr_lite/services/station_service.dart';
 import 'package:trackr_lite/services/storage_service.dart';
@@ -382,6 +384,132 @@ void main() {
       final foundNight = await StorageService.getHistoryShiftForDate('2026-10-12', isNightShift: true);
       expect(foundNight, isNotNull);
       expect(foundNight!.isNightShift, isTrue);
+    });
+
+    test('Movement overrides can be saved, retrieved, and deleted', () async {
+      const override = MovementDayItem(
+        date: '2026-10-05',
+        type: MovementItemType.stay,
+        stayStation: 'AWY',
+        isManualOverride: true,
+      );
+
+      await StorageService.saveMovementOverride(override);
+      var overrides = await StorageService.getMovementOverrides();
+      expect(overrides.containsKey('2026-10-05'), isTrue);
+      expect(overrides['2026-10-05']!.stayStation, 'AWY');
+      expect(overrides['2026-10-05']!.isManualOverride, isTrue);
+
+      await StorageService.deleteMovementOverride('2026-10-05');
+      overrides = await StorageService.getMovementOverrides();
+      expect(overrides.containsKey('2026-10-05'), isFalse);
+    });
+  });
+
+  group('MovementService', () {
+    test('formatTimeDot formats military and dotted time notation correctly', () {
+      expect(MovementService.formatTimeDot('09:16'), '09.16');
+      expect(MovementService.formatTimeDot('9:16'), '09.16');
+      expect(MovementService.formatTimeDot('16:36'), '16.36');
+      expect(MovementService.formatTimeDot('09.16'), '09.16');
+      expect(MovementService.formatTimeDot(''), '_____');
+      expect(MovementService.formatTimeDot('_____'), '_____');
+    });
+
+    test('formatDateDot formats DateTime correctly', () {
+      expect(MovementService.formatDateDot(DateTime(2026, 10, 1)), '01.10.26');
+      expect(MovementService.formatDateDot(DateTime(2026, 10, 15)), '15.10.26');
+    });
+
+    test('formatDualDateDot formats cross-day and cross-month night dates', () {
+      expect(MovementService.formatDualDateDot(DateTime(2026, 10, 6), DateTime(2026, 10, 7)), '06/07.10.26');
+      expect(MovementService.formatDualDateDot(DateTime(2026, 10, 31), DateTime(2026, 11, 1)), '31.10/01.11.26');
+    });
+
+    test('Generates Register and Dual Date movement report strings according to reference sheet', () {
+      final days = [
+        const MovementDayItem(
+          date: '2026-10-01',
+          type: MovementItemType.transit,
+          runs: [
+            MovementRun(
+              fromStation: 'KTYM',
+              toStation: 'CGY',
+              departureTime: '09:16',
+              arrivalTime: '16:36',
+            ),
+          ],
+        ),
+        const MovementDayItem(
+          date: '2026-10-02',
+          type: MovementItemType.stay,
+          stayStation: 'CGY',
+        ),
+        const MovementDayItem(
+          date: '2026-10-06',
+          type: MovementItemType.transit,
+          runs: [
+            MovementRun(
+              fromStation: 'AFK',
+              toStation: 'AWY',
+              departureTime: '21:57',
+              arrivalTime: '04:20',
+              isOvernight: true,
+              isDepartureLeg: true,
+            ),
+          ],
+        ),
+        const MovementDayItem(
+          date: '2026-10-07',
+          type: MovementItemType.transit,
+          runs: [
+            MovementRun(
+              fromStation: 'AFK',
+              toStation: 'AWY',
+              departureTime: '21:57',
+              arrivalTime: '04:20',
+              isOvernight: true,
+              isArrivalLeg: true,
+            ),
+            MovementRun(
+              fromStation: 'AWY',
+              toStation: 'TCR',
+              departureTime: '15:53',
+              arrivalTime: '',
+              isOvernight: false,
+            ),
+          ],
+        ),
+      ];
+
+      // 1. Register style
+      final registerReport = MovementService.formatMovementReport(
+        monthDays: days,
+        selectedMonth: DateTime(2026, 10, 1),
+        machineName: 'UTV005H',
+        division: 'TVC',
+        style: MovementFormatStyle.register,
+      );
+
+      expect(registerReport, contains('* MACHINE MOVEMENT – OCTOBER 2026 *'));
+      expect(registerReport, contains('01.10.26 :- KTYM – CGY (09.16 – 16.36 hrs)'));
+      expect(registerReport, contains('02.10.26 :- Stay at CGY'));
+      expect(registerReport, contains('06.10.26 :- AFK – _____ (21.57 – _____ hrs)'));
+      expect(registerReport, contains('07.10.26 :- { _____ – AWY (_____ – 04.20 hrs)'));
+      expect(registerReport, contains('            { AWY – TCR (15.53 – _____ hrs)'));
+
+      // 2. Dual date style
+      final dualDateReport = MovementService.formatMovementReport(
+        monthDays: days,
+        selectedMonth: DateTime(2026, 10, 1),
+        machineName: 'UTV005H',
+        division: 'TVC',
+        style: MovementFormatStyle.dualDate,
+      );
+
+      expect(dualDateReport, contains('01.10.26 :- KTYM – CGY (09.16 – 16.36 hrs)'));
+      expect(dualDateReport, contains('02.10.26 :- Stay at CGY'));
+      expect(dualDateReport, contains('06/07.10.26 :- AFK – AWY (21.57 – 04.20 hrs)'));
     });
   });
 }

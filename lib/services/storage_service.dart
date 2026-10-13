@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/movement_entry.dart';
 import '../models/reminder_item.dart';
 import '../models/shift_log.dart';
 
@@ -21,6 +22,7 @@ class StorageService {
   static const _notesKey = 'trackr_lite_notes';
   static const _remarkTemplatesKey = 'trackr_lite_remark_templates_v2';
   static const _legacyRemarkTemplatesKey = 'trackr_lite_remark_templates';
+  static const _movementOverridesKey = 'trackr_lite_movement_overrides';
 
   static const List<String> defaultRemarkTemplates = [
     'Kindly arrange one barrel diesel',
@@ -169,6 +171,7 @@ class StorageService {
     await prefs.remove(_notesKey);
     await prefs.remove(_readyStationKey);
     await prefs.remove(_stabledStationKey);
+    await prefs.remove(_movementOverridesKey);
   }
 
   static Future<void> saveActiveShift(ShiftLog log) async {
@@ -183,6 +186,16 @@ class StorageService {
     if (log.stabledStation.isNotEmpty) {
       await prefs.setString(_stabledStationKey, log.stabledStation);
     }
+  }
+
+  static Future<String> getMachineName() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_machineNameKey) ?? 'UTV005H';
+  }
+
+  static Future<String> getDivision() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_divisionKey) ?? 'TVC';
   }
 
   /// Saves or updates the current shift in History datewise.
@@ -302,12 +315,51 @@ class StorageService {
     await prefs.setString(_notesKey, jsonEncode(rawList));
   }
 
+  // --- Machine Movement Overrides ---
+  static Future<Map<String, MovementDayItem>> getMovementOverrides() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_movementOverridesKey);
+    if (raw == null) return {};
+    try {
+      final map = jsonDecode(raw) as Map<String, dynamic>;
+      return map.map((k, v) => MapEntry(k, MovementDayItem.fromJson(v as Map<String, dynamic>)));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  static Future<void> saveMovementOverride(MovementDayItem item) async {
+    final prefs = await SharedPreferences.getInstance();
+    final current = await getMovementOverrides();
+    current[item.date] = item.copyWith(isManualOverride: true);
+    final rawMap = current.map((k, v) => MapEntry(k, v.toJson()));
+    await prefs.setString(_movementOverridesKey, jsonEncode(rawMap));
+  }
+
+  static Future<void> deleteMovementOverride(String date) async {
+    final prefs = await SharedPreferences.getInstance();
+    final current = await getMovementOverrides();
+    current.remove(date);
+    final rawMap = current.map((k, v) => MapEntry(k, v.toJson()));
+    await prefs.setString(_movementOverridesKey, jsonEncode(rawMap));
+  }
+
+  static Future<void> clearMovementOverridesForMonth(int year, int month) async {
+    final prefs = await SharedPreferences.getInstance();
+    final current = await getMovementOverrides();
+    final prefix = '$year-${month.toString().padLeft(2, '0')}-';
+    current.removeWhere((k, _) => k.startsWith(prefix));
+    final rawMap = current.map((k, v) => MapEntry(k, v.toJson()));
+    await prefs.setString(_movementOverridesKey, jsonEncode(rawMap));
+  }
+
   // --- Backup Export / Import ---
   static Future<String> exportBackupJson() async {
     final prefs = await SharedPreferences.getInstance();
     final active = await getActiveShift();
     final history = await getHistory();
     final notes = await getNotes();
+    final movementOverrides = await getMovementOverrides();
 
     final preferences = {
       'machineName': prefs.getString(_machineNameKey) ?? active.machineName,
@@ -326,6 +378,7 @@ class StorageService {
       'history': history.map((h) => h.toJson()).toList(),
       'notes': notes.map((n) => n.toJson()).toList(),
       'remarkTemplates': await getRemarkTemplates(),
+      'movementOverrides': movementOverrides.map((k, v) => MapEntry(k, v.toJson())),
     };
     return const JsonEncoder.withIndent('  ').convert(map);
   }
@@ -368,6 +421,11 @@ class StorageService {
             .map((e) => e.toString())
             .toList();
         await saveRemarkTemplates(templatesList);
+      }
+
+      if (map['movementOverrides'] != null) {
+        final overrides = (map['movementOverrides'] as Map<String, dynamic>);
+        await prefs.setString(_movementOverridesKey, jsonEncode(overrides));
       }
 
       return true;

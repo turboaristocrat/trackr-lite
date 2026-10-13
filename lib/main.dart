@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'screens/history_screen.dart';
+import 'screens/movement_screen.dart';
 import 'screens/notes_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/shift_screen.dart';
@@ -36,14 +37,16 @@ class MainScaffold extends StatefulWidget {
 class _MainScaffoldState extends State<MainScaffold> {
   int _currentIndex = 0;
   final GlobalKey<ShiftScreenState> _shiftKey = GlobalKey<ShiftScreenState>();
-  final GlobalKey<NotesScreenState> _notesKey = GlobalKey<NotesScreenState>();
+  final GlobalKey<MovementScreenState> _movementKey = GlobalKey<MovementScreenState>();
   final GlobalKey<HistoryScreenState> _historyKey = GlobalKey<HistoryScreenState>();
+  final GlobalKey<NotesScreenState> _notesKey = GlobalKey<NotesScreenState>();
   final GlobalKey<SettingsScreenState> _settingsKey = GlobalKey<SettingsScreenState>();
 
   void _onDataChanged() {
     _shiftKey.currentState?.refreshShift();
-    _notesKey.currentState?.refreshNotes();
+    _movementKey.currentState?.refreshMovement();
     _historyKey.currentState?.refreshHistory();
+    _notesKey.currentState?.refreshNotes();
   }
 
   @override
@@ -61,10 +64,11 @@ class _MainScaffoldState extends State<MainScaffold> {
           ShiftScreen(
             key: _shiftKey,
             onShiftCompleted: () {
+              _movementKey.currentState?.refreshMovement();
               _historyKey.currentState?.refreshHistory();
             },
           ),
-          NotesScreen(key: _notesKey),
+          MovementScreen(key: _movementKey),
           HistoryScreen(
             key: _historyKey,
             onSelectShift: (shift) {
@@ -72,6 +76,7 @@ class _MainScaffoldState extends State<MainScaffold> {
               _shiftKey.currentState?.refreshShift();
             },
           ),
+          NotesScreen(key: _notesKey),
           SettingsScreen(
             key: _settingsKey,
             onDataChanged: _onDataChanged,
@@ -84,10 +89,12 @@ class _MainScaffoldState extends State<MainScaffold> {
           if (idx == 0) {
             _shiftKey.currentState?.refreshShift();
           } else if (idx == 1) {
-            _notesKey.currentState?.refreshNotes();
+            _movementKey.currentState?.refreshMovement();
           } else if (idx == 2) {
             _historyKey.currentState?.refreshHistory();
           } else if (idx == 3) {
+            _notesKey.currentState?.refreshNotes();
+          } else if (idx == 4) {
             _settingsKey.currentState?.refreshSettings();
           }
           setState(() => _currentIndex = idx);
@@ -99,14 +106,19 @@ class _MainScaffoldState extends State<MainScaffold> {
             label: 'Active Shift',
           ),
           NavigationDestination(
-            icon: Icon(Icons.checklist_rounded),
-            selectedIcon: Icon(Icons.checklist_rounded),
-            label: 'Notes',
+            icon: Icon(Icons.alt_route_rounded),
+            selectedIcon: Icon(Icons.alt_route_rounded),
+            label: 'Movement',
           ),
           NavigationDestination(
             icon: Icon(Icons.history_rounded),
             selectedIcon: Icon(Icons.history_rounded),
             label: 'History',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.checklist_rounded),
+            selectedIcon: Icon(Icons.checklist_rounded),
+            label: 'Notes',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),
