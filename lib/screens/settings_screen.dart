@@ -505,42 +505,21 @@ class SettingsScreenState extends State<SettingsScreen> {
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
               children: [
-                // PWA Field App Install Card
-                _buildPwaInstallCard(),
-                const SizedBox(height: 14),
-
                 // Machine Profile Card
                 _buildMachineProfileCard(),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
 
                 // Shift Remark Templates Card
                 _buildRemarkTemplatesCard(),
-                const SizedBox(height: 18),
-
-                // Backup & Restore Section Header
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                  child: Row(
-                    children: [
-                      Icon(Icons.cloud_sync_rounded, size: 18, color: AppTheme.primary),
-                      SizedBox(width: 6),
-                      Text(
-                        'BACKUP & CLOUD RESTORE',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.8,
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
 
                 // Backup Options Card
                 _buildBackupCard(),
-                const SizedBox(height: 18),
+                const SizedBox(height: 12),
+
+                // PWA Field App Install Card
+                _buildPwaInstallCard(),
+                const SizedBox(height: 12),
 
                 // App Info & Version Card
                 _buildAppInfoCard(),
@@ -552,76 +531,95 @@ class SettingsScreenState extends State<SettingsScreen> {
   Widget _buildPwaInstallCard() {
     return Card(
       elevation: 0,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
+      clipBehavior: Clip.antiAlias,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: false,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFDB324).withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.install_mobile_rounded, color: Color(0xFF996800), size: 22),
+          ),
+          title: const Text(
+            'Install Field App',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          ),
+          subtitle: const Text(
+            'Install to home screen for 1-tap offline use',
+            style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+          ),
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFFDB324).withValues(alpha: 0.15),
+                color: AppTheme.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppTheme.borderColor),
               ),
-              child: const Icon(Icons.install_mobile_rounded, color: Color(0xFF996800), size: 22),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Column(
+              child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Install Field App',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5),
-                  ),
+                  Text('📱 On Android (Chrome):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
                   SizedBox(height: 2),
-                  Text(
-                    'Install to home screen for 1-tap offline use',
-                    style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
-                  ),
+                  Text('1. Tap three dots (⋮) menu in top right.\n2. Tap "Install app" or "Add to Home screen".', style: TextStyle(fontSize: 12, height: 1.35, color: AppTheme.textSecondary)),
+                  SizedBox(height: 8),
+                  Text('🍎 On iPhone (Safari):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
+                  SizedBox(height: 2),
+                  Text('1. Tap Share button at bottom.\n2. Tap "Add to Home Screen".', style: TextStyle(fontSize: 12, height: 1.35, color: AppTheme.textSecondary)),
                 ],
               ),
             ),
-            ElevatedButton(
-              onPressed: () async {
-                final accepted = await promptPwaInstall();
-                if (!accepted && mounted) {
-                  showDialog(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      backgroundColor: AppTheme.cardBg,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      title: const Row(
-                        children: [
-                          Icon(Icons.phone_android_rounded, color: AppTheme.primary, size: 22),
-                          SizedBox(width: 8),
-                          Text('Install TRACKR Lite', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  final accepted = await promptPwaInstall();
+                  if (!accepted && mounted) {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        backgroundColor: AppTheme.cardBg,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        title: const Row(
+                          children: [
+                            Icon(Icons.phone_android_rounded, color: AppTheme.primary, size: 22),
+                            SizedBox(width: 8),
+                            Text('Install TRACKR Lite', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        content: const Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('To install this app on your phone:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            SizedBox(height: 10),
+                            Text('📱 On Android (Chrome):\n1. Tap the three dots (⋮) menu in top right.\n2. Tap "Install app" or "Add to Home screen".', style: TextStyle(fontSize: 12.5, height: 1.4)),
+                            SizedBox(height: 10),
+                            Text('🍎 On iPhone (Safari):\n1. Tap the Share button (square with arrow) at bottom.\n2. Scroll and tap "Add to Home Screen".', style: TextStyle(fontSize: 12.5, height: 1.4)),
+                          ],
+                        ),
+                        actions: [
+                          ElevatedButton(onPressed: () => Navigator.pop(ctx), child: const Text('Got It')),
                         ],
                       ),
-                      content: const Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('To install this app on your phone:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                          SizedBox(height: 10),
-                          Text('📱 On Android (Chrome):\n1. Tap the three dots (⋮) menu in top right.\n2. Tap "Install app" or "Add to Home screen".', style: TextStyle(fontSize: 12.5, height: 1.4)),
-                          SizedBox(height: 10),
-                          Text('🍎 On iPhone (Safari):\n1. Tap the Share button (square with arrow) at bottom.\n2. Scroll and tap "Add to Home Screen".', style: TextStyle(fontSize: 12.5, height: 1.4)),
-                        ],
-                      ),
-                      actions: [
-                        ElevatedButton(onPressed: () => Navigator.pop(ctx), child: const Text('Got It')),
-                      ],
-                    ),
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFDB324),
-                foregroundColor: const Color(0xFF191C20),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                visualDensity: VisualDensity.compact,
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFDB324),
+                  foregroundColor: const Color(0xFF191C20),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                icon: const Icon(Icons.install_mobile_rounded, size: 18),
+                label: const Text('Install to Device Now', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
               ),
-              child: const Text('Install', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
             ),
           ],
         ),
@@ -768,56 +766,48 @@ class SettingsScreenState extends State<SettingsScreen> {
   Widget _buildMachineProfileCard() {
     return Card(
       elevation: 0,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primary.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.train_rounded, color: AppTheme.primary, size: 22),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Machine & Section Profile',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Default configuration for daily block logs',
-                        style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
-                      ),
-                    ],
-                  ),
-                ),
-                OutlinedButton.icon(
-                  onPressed: _editMachineSetup,
-                  icon: const Icon(Icons.edit_rounded, size: 15),
-                  label: const Text('Edit', style: TextStyle(fontSize: 12)),
-                  style: OutlinedButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  ),
-                ),
-              ],
+      clipBehavior: Clip.antiAlias,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: false,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
             ),
-            const Divider(height: 24),
+            child: const Icon(Icons.train_rounded, color: AppTheme.primary, size: 22),
+          ),
+          title: const Text(
+            'Machine & Section Profile',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          ),
+          subtitle: Text(
+            '${_activeShift?.machineName ?? 'UTV005H'} • ${_activeShift?.division ?? 'TVC'}${_activeShift?.section.isNotEmpty == true ? ' / ${_activeShift!.section}' : ''}',
+            style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+          ),
+          children: [
             Row(
               children: [
                 _buildProfileItem('Machine', _activeShift?.machineName ?? 'UTV005H'),
                 _buildProfileItem('Division', _activeShift?.division ?? 'TVC'),
                 _buildProfileItem('Section', _activeShift?.section ?? 'KTYM'),
               ],
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _editMachineSetup,
+                icon: const Icon(Icons.edit_rounded, size: 16),
+                label: const Text('Edit Profile Details', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+              ),
             ),
           ],
         ),
@@ -841,21 +831,35 @@ class SettingsScreenState extends State<SettingsScreen> {
   Widget _buildBackupCard() {
     return Card(
       elevation: 0,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Secure Your Railway Data',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5),
+      clipBehavior: Clip.antiAlias,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: false,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
             ),
-            const SizedBox(height: 4),
+            child: const Icon(Icons.cloud_sync_rounded, color: AppTheme.primary, size: 22),
+          ),
+          title: const Text(
+            'Backup & Cloud Restore',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          ),
+          subtitle: const Text(
+            'Google Drive, local file backup & restore',
+            style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+          ),
+          children: [
             const Text(
               'Backup includes active shifts, completed history, and all notes/reminders. Restore anytime to transfer to another phone or computer.',
               style: TextStyle(fontSize: 12, color: AppTheme.textSecondary, height: 1.35),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
             // Google Drive Backup
             InkWell(
@@ -1046,26 +1050,52 @@ class SettingsScreenState extends State<SettingsScreen> {
   Widget _buildAppInfoCard() {
     return Card(
       elevation: 0,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            const TrackrLogo(iconSize: 28, fontSize: 16),
-            const SizedBox(height: 6),
-            const Text(
-              '© johnsankeyjob@gmail.com',
-              style: TextStyle(fontSize: 11.5, color: AppTheme.textSecondary),
+      clipBehavior: Clip.antiAlias,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: false,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(10),
             ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: const Text(
-                'v1.0.0 (Offline PWA)',
-                style: TextStyle(fontSize: 11, fontFamily: 'monospace', color: AppTheme.textMuted),
+            child: const Icon(Icons.info_outline_rounded, color: AppTheme.textSecondary, size: 22),
+          ),
+          title: const Text(
+            'About TRACKR Lite',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          ),
+          subtitle: const Text(
+            'v1.0.0 (Offline PWA) • App information',
+            style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+          ),
+          children: [
+            Center(
+              child: Column(
+                children: [
+                  const TrackrLogo(iconSize: 28, fontSize: 16),
+                  const SizedBox(height: 6),
+                  const Text(
+                    '© johnsankeyjob@gmail.com',
+                    style: TextStyle(fontSize: 11.5, color: AppTheme.textSecondary),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text(
+                      'v1.0.0 (Offline PWA)',
+                      style: TextStyle(fontSize: 11, fontFamily: 'monospace', color: AppTheme.textMuted),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

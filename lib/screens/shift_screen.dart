@@ -617,7 +617,7 @@ class ShiftScreenState extends State<ShiftScreen> {
           child: shift.blocks.isEmpty
               ? _buildEmptyState()
               : ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 56),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 64),
                   itemCount: shift.blocks.length + 2,
                   itemBuilder: (ctx, i) {
                     if (i == shift.blocks.length) {

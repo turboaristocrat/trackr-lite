@@ -147,27 +147,31 @@ class MovementService {
       }
 
       if (dayShifts.isNotEmpty) {
-        // Collect transit runs from all shifts on this day
+        // Collect movement runs from all shifts on this day
         for (final shift in dayShifts) {
           if (shift.stabledStation.trim().isNotEmpty) {
             lastKnownStabled = shift.stabledStation.trim().toUpperCase();
           }
 
+          // Prioritize explicit movement entries (b.isTransit == true).
+          // If no explicit movement entries are logged, fall back to logged track blocks (b.isTransit == false).
           final transits = shift.blocks.where((b) => b.isTransit).toList();
-          if (transits.isNotEmpty) {
-            // First transit provides departure station and time
-            final firstTransit = transits.first;
-            final from = firstTransit.stationFrom.trim().isNotEmpty
-                ? firstTransit.stationFrom.trim().toUpperCase()
-                : (shift.readyStation.trim().isNotEmpty ? shift.readyStation.trim().toUpperCase() : '_____');
-            final dep = firstTransit.startTime.trim();
+          final effectiveRuns = transits.isNotEmpty ? transits : shift.blocks;
 
-            // Last transit provides final destination station and arrival time
-            final lastTransit = transits.last;
-            final to = lastTransit.stationTo.trim().isNotEmpty
-                ? lastTransit.stationTo.trim().toUpperCase()
+          if (effectiveRuns.isNotEmpty) {
+            // First run provides departure station and time
+            final firstRun = effectiveRuns.first;
+            final from = firstRun.stationFrom.trim().isNotEmpty
+                ? firstRun.stationFrom.trim().toUpperCase()
+                : (shift.readyStation.trim().isNotEmpty ? shift.readyStation.trim().toUpperCase() : '_____');
+            final dep = firstRun.startTime.trim();
+
+            // Last run provides final destination station and arrival time
+            final lastRun = effectiveRuns.last;
+            final to = lastRun.stationTo.trim().isNotEmpty
+                ? lastRun.stationTo.trim().toUpperCase()
                 : (shift.stabledStation.trim().isNotEmpty ? shift.stabledStation.trim().toUpperCase() : '_____');
-            final arr = lastTransit.endTime.trim();
+            final arr = lastRun.endTime.trim();
 
             final isNight = shift.isNightShift || isOvernightTime(dep, arr);
 
