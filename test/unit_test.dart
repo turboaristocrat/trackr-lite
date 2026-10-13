@@ -511,5 +511,92 @@ void main() {
       expect(dualDateReport, contains('02.10.26 :- Stay at CGY'));
       expect(dualDateReport, contains('06/07.10.26 :- AFK – AWY (21.57 – 04.20 hrs)'));
     });
+
+    test('generateMonthDays auto-generates overall shift movement matching user screenshot (AFK 20.21 to WKI 07.14)', () {
+      // User's exact shift log from image 1:
+      // Ready at AFK 19:05
+      // 1st transit: AFK - WKI (20:21 - 21:50)
+      // Intermediate blocks and transits: MGK - TCR (05:39 - 05:58)
+      // Final transit: PNQ - WKI (06:40 - 07:14)
+      // Stabled at WKI
+      const sampleNightShift = ShiftLog(
+        date: '2026-10-12',
+        machineName: 'UTV005H',
+        division: 'TVC',
+        section: 'TCR',
+        readyStation: 'AFK',
+        readyTime: '19:05',
+        stabledStation: 'WKI',
+        isNightShift: true,
+        blocks: [
+          BlockEntry(
+            id: 't1',
+            startTime: '20:21',
+            endTime: '21:50',
+            stationFrom: 'AFK',
+            stationTo: 'WKI',
+            isTransit: true,
+          ),
+          BlockEntry(
+            id: 'b1',
+            startTime: '23:50',
+            endTime: '00:20',
+            stationFrom: 'WKI',
+            stationTo: 'WKI',
+            line: 'Yard',
+            items: [WorkItem(activity: 'Rail Loaded', output: 6)],
+          ),
+          BlockEntry(
+            id: 't2',
+            startTime: '05:39',
+            endTime: '05:58',
+            stationFrom: 'MGK',
+            stationTo: 'TCR',
+            isTransit: true,
+          ),
+          BlockEntry(
+            id: 't3',
+            startTime: '06:40',
+            endTime: '07:14',
+            stationFrom: 'PNQ',
+            stationTo: 'WKI',
+            isTransit: true,
+          ),
+        ],
+      );
+
+      final monthDays = MovementService.generateMonthDays(
+        year: 2026,
+        month: 10,
+        historyShifts: [sampleNightShift],
+      );
+
+      // Day 12 item (Departure leg): AFK - _____ (20.21 - _____ hrs)
+      final day12 = monthDays.firstWhere((d) => d.date == '2026-10-12');
+      expect(day12.type, MovementItemType.transit);
+      expect(day12.runs.length, 1);
+      expect(day12.runs.first.fromStation, 'AFK');
+      expect(day12.runs.first.departureTime, '20:21');
+      expect(day12.runs.first.isDepartureLeg, isTrue);
+
+      // Day 13 item (Arrival leg): _____ - WKI (_____ - 07.14 hrs)
+      final day13 = monthDays.firstWhere((d) => d.date == '2026-10-13');
+      expect(day13.type, MovementItemType.transit);
+      expect(day13.runs.length, 1);
+      expect(day13.runs.first.toStation, 'WKI');
+      expect(day13.runs.first.arrivalTime, '07:14');
+      expect(day13.runs.first.isArrivalLeg, isTrue);
+
+      // Verify generated report strings for day 12 and 13
+      final report = MovementService.formatMovementReport(
+        year: 2026,
+        month: 10,
+        items: monthDays,
+        style: MovementFormatStyle.register,
+      );
+
+      expect(report, contains('12.10.26 :- AFK – _____ (20.21 – _____ hrs)'));
+      expect(report, contains('13.10.26 :- _____ – WKI (_____ – 07.14 hrs)'));
+    });
   });
 }

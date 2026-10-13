@@ -154,43 +154,56 @@ class MovementService {
           }
 
           final transits = shift.blocks.where((b) => b.isTransit).toList();
-          for (final b in transits) {
-            final from = b.stationFrom.trim().toUpperCase();
-            final to = b.stationTo.trim().toUpperCase();
-            final dep = b.startTime.trim();
-            final arr = b.endTime.trim();
+          if (transits.isNotEmpty) {
+            // First transit provides departure station and time
+            final firstTransit = transits.first;
+            final from = firstTransit.stationFrom.trim().isNotEmpty
+                ? firstTransit.stationFrom.trim().toUpperCase()
+                : (shift.readyStation.trim().isNotEmpty ? shift.readyStation.trim().toUpperCase() : '_____');
+            final dep = firstTransit.startTime.trim();
+
+            // Last transit provides final destination station and arrival time
+            final lastTransit = transits.last;
+            final to = lastTransit.stationTo.trim().isNotEmpty
+                ? lastTransit.stationTo.trim().toUpperCase()
+                : (shift.stabledStation.trim().isNotEmpty ? shift.stabledStation.trim().toUpperCase() : '_____');
+            final arr = lastTransit.endTime.trim();
+
             final isNight = shift.isNightShift || isOvernightTime(dep, arr);
 
-            if (isNight && (arr.isEmpty || isOvernightTime(dep, arr))) {
-              // This is an overnight run!
-              // Day 1: Departure leg
+            if (isNight) {
+              // Night Shift: Spans across midnight
+              // Day 1 (Night Departure): AFK - __ (20.21 - __ hrs)
               dayRuns.add(MovementRun(
                 fromStation: from,
-                toStation: to.isEmpty ? '_____' : to,
+                toStation: '_____',
                 departureTime: dep,
                 arrivalTime: '_____',
                 isOvernight: true,
                 isDepartureLeg: true,
               ));
 
-              // Day 2 (tomorrow): Arrival leg
+              // Day 2 (Morning Arrival): __ - WKI (__ - 07.14 hrs)
               pendingNextDayArrival = MovementRun(
-                fromStation: from.isEmpty ? '_____' : from,
-                toStation: to.isEmpty ? '_____' : to,
+                fromStation: '_____',
+                toStation: to,
                 departureTime: '_____',
-                arrivalTime: arr.isEmpty ? '_____' : arr,
+                arrivalTime: arr,
                 isOvernight: true,
                 isArrivalLeg: true,
               );
             } else {
-              // Normal same-day transit run
+              // Daytime Shift (Same day): KTYM - CGY (09.16 - 16.36 hrs)
               dayRuns.add(MovementRun(
                 fromStation: from,
                 toStation: to,
                 departureTime: dep,
                 arrivalTime: arr,
+                isOvernight: false,
               ));
-              if (to.isNotEmpty) lastKnownStabled = to;
+              if (to.isNotEmpty && to != '_____') {
+                lastKnownStabled = to;
+              }
             }
           }
         }

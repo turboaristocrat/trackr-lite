@@ -44,6 +44,8 @@ class _EditMovementDayDialogState extends State<EditMovementDayDialog> {
           dep: TextEditingController(text: r.departureTime),
           arr: TextEditingController(text: r.arrivalTime),
           isOvernight: r.isOvernight,
+          isArrivalLeg: r.isArrivalLeg,
+          isDepartureLeg: r.isDepartureLeg,
         ));
       }
     } else {
@@ -53,6 +55,8 @@ class _EditMovementDayDialogState extends State<EditMovementDayDialog> {
         dep: TextEditingController(),
         arr: TextEditingController(),
         isOvernight: false,
+        isArrivalLeg: false,
+        isDepartureLeg: false,
       ));
     }
   }
@@ -132,6 +136,8 @@ class _EditMovementDayDialogState extends State<EditMovementDayDialog> {
             departureTime: dep,
             arrivalTime: arr,
             isOvernight: r.isOvernight,
+            isArrivalLeg: r.isArrivalLeg,
+            isDepartureLeg: r.isDepartureLeg,
           ));
         }
       }
@@ -397,6 +403,8 @@ class _RunControllers {
   final TextEditingController dep;
   final TextEditingController arr;
   bool isOvernight;
+  bool isArrivalLeg;
+  bool isDepartureLeg;
 
   _RunControllers({
     required this.from,
@@ -404,6 +412,8 @@ class _RunControllers {
     required this.dep,
     required this.arr,
     this.isOvernight = false,
+    this.isArrivalLeg = false,
+    this.isDepartureLeg = false,
   });
 
   void dispose() {
