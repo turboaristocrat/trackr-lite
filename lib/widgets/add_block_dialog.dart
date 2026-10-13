@@ -367,7 +367,7 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
                 Text(
                   widget.initialEntry != null
                       ? 'Edit Entry'
-                      : (_isTransit ? 'Log Movement / Transit' : 'Log Track Block'),
+                      : (_isTransit ? 'Log Movement' : 'Log Track Block'),
                   style: const TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.bold,
@@ -378,7 +378,7 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
                 SegmentedButton<bool>(
                   segments: const [
                     ButtonSegment(value: false, label: Text('Block', style: TextStyle(fontSize: 12))),
-                    ButtonSegment(value: true, label: Text('Transit', style: TextStyle(fontSize: 12))),
+                    ButtonSegment(value: true, label: Text('Movement', style: TextStyle(fontSize: 12))),
                   ],
                   selected: {_isTransit},
                   onSelectionChanged: (set) {
@@ -512,12 +512,12 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
               ),
               const SizedBox(height: 16),
             ] else ...[
-              // Transit Distance
+              // Movement Distance
               TextField(
                 controller: _transitDistanceCtrl,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(
-                  labelText: 'Transit Distance (Km)',
+                  labelText: 'Movement Distance (Km)',
                   hintText: 'e.g. 18.5',
                   prefixIcon: Icon(Icons.speed_rounded, size: 18),
                   suffixText: 'Km',

@@ -288,15 +288,19 @@ class MovementService {
       }
 
       if (item.type == MovementItemType.stay) {
-        final station = item.stayStation.trim().isEmpty ? '_____' : item.stayStation.trim().toUpperCase();
-        buffer.writeln('$dateDot :- Stay at $station');
+        final station = item.stayStation.trim().toUpperCase();
+        if (station.isNotEmpty) {
+          buffer.writeln('$dateDot :- Stay at $station');
+        }
         continue;
       }
 
       // Transit items
       if (item.runs.isEmpty) {
-        final station = item.stayStation.trim().isEmpty ? '_____' : item.stayStation.trim().toUpperCase();
-        buffer.writeln('$dateDot :- Stay at $station');
+        final station = item.stayStation.trim().toUpperCase();
+        if (station.isNotEmpty) {
+          buffer.writeln('$dateDot :- Stay at $station');
+        }
         continue;
       }
 

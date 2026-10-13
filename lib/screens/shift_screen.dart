@@ -516,7 +516,7 @@ class ShiftScreenState extends State<ShiftScreen> {
                               ? '${shift.totalTransitKm.toInt()} Km'
                               : '${shift.totalTransitKm.toStringAsFixed(1)} Km')
                           : '0 Km',
-                      'Transit',
+                      'Movement',
                       Icons.navigation_rounded,
                       AppTheme.secondary,
                     ),
@@ -600,7 +600,7 @@ class ShiftScreenState extends State<ShiftScreen> {
               onPressed: () => _addOrEditBlock(isTransit: false),
               icon: const Icon(Icons.add_rounded, size: 22, color: Color(0xFF191C20)),
               label: const Text(
-                'Log Block / Transit',
+                'Add Block / Movement',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 14.5,
@@ -801,7 +801,7 @@ class ShiftScreenState extends State<ShiftScreen> {
                 ),
                 const SizedBox(height: 4),
                 const Text(
-                  'Tap "+ Log Block / Transit" above to record Sleepers/Rails work or movement runs.',
+                  'Tap "+ Add Block / Movement" above to record Sleepers/Rails work or movement runs.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, height: 1.35),
                 ),
@@ -854,7 +854,7 @@ class ShiftScreenState extends State<ShiftScreen> {
                     ),
                   ),
                   child: Text(
-                    isTransit ? 'TRANSIT' : 'Block – $blockNumber',
+                    isTransit ? 'MOVEMENT' : 'Block – $blockNumber',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 11,
@@ -941,7 +941,7 @@ class ShiftScreenState extends State<ShiftScreen> {
                     border: Border.all(color: AppTheme.amberAccent.withValues(alpha: 0.3)),
                   ),
                   child: Text(
-                    'Transit Distance: ${b.output} Km',
+                    'Movement Distance: ${b.output} Km',
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.secondary),
                   ),
                 ),

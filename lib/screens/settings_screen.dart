@@ -159,9 +159,60 @@ class SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _deleteTemplate(int index) async {
-    await StorageService.deleteRemarkTemplate(index);
-    await refreshSettings();
+  Future<void> _deleteTemplate(int index, String templateText) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.cardBg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppTheme.redDanger, size: 22),
+            SizedBox(width: 8),
+            Text('Delete Template?', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Are you sure you want to remove this quick phrase?',
+              style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppTheme.borderColor),
+              ),
+              child: Text(
+                templateText,
+                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.redDanger),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await StorageService.deleteRemarkTemplate(index);
+      await refreshSettings();
+    }
   }
 
   Future<void> _resetTemplatesToDefault() async {
@@ -581,37 +632,36 @@ class SettingsScreenState extends State<SettingsScreen> {
   Widget _buildRemarkTemplatesCard() {
     return Card(
       elevation: 0,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      clipBehavior: Clip.antiAlias,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: false,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppTheme.amberAccent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.bolt_rounded, color: AppTheme.amberAccent, size: 22),
+          ),
+          title: const Text(
+            'Shift Remark Templates',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          ),
+          subtitle: Text(
+            '${_remarkTemplates.length} quick phrase${_remarkTemplates.length == 1 ? '' : 's'} configured',
+            style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+          ),
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppTheme.amberAccent.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.bolt_rounded, color: AppTheme.amberAccent, size: 22),
-                ),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Shift Remark Templates',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        'Quick phrases for 1-tap logging in remarks',
-                        style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
-                      ),
-                    ],
-                  ),
+                const Text(
+                  'Quick phrases for 1-tap logging in remarks',
+                  style: TextStyle(fontSize: 11.5, color: AppTheme.textSecondary),
                 ),
                 OutlinedButton.icon(
                   onPressed: _addNewTemplate,
@@ -624,7 +674,7 @@ class SettingsScreenState extends State<SettingsScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             if (_remarkTemplates.isEmpty)
               Container(
                 padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
@@ -694,7 +744,7 @@ class SettingsScreenState extends State<SettingsScreen> {
                         icon: const Icon(Icons.delete_outline_rounded, size: 16, color: AppTheme.redDanger),
                         visualDensity: VisualDensity.compact,
                         tooltip: 'Delete Template',
-                        onPressed: () => _deleteTemplate(idx),
+                        onPressed: () => _deleteTemplate(idx, tpl),
                       ),
                     ],
                   ),

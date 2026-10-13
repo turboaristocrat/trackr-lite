@@ -408,7 +408,37 @@ class MovementScreenState extends State<MovementScreen> {
 
   Widget _buildItemDetails(MovementDayItem item) {
     if (item.type == MovementItemType.stay) {
-      final st = item.stayStation.isNotEmpty ? item.stayStation : '_____';
+      final st = item.stayStation.trim().toUpperCase();
+      if (st.isEmpty) {
+        return Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: AppTheme.borderColor),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.add_location_alt_outlined, size: 13, color: AppTheme.textMuted),
+                  SizedBox(width: 5),
+                  Text(
+                    'No movement logged (Tap to edit)',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.normal,
+                      color: AppTheme.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      }
+
       return Row(
         children: [
           Container(
