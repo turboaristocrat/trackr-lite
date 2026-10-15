@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../models/block_entry.dart';
 import '../models/movement_entry.dart';
 import '../models/shift_log.dart';
 import 'web_launcher_stub.dart'
@@ -92,6 +93,17 @@ class MovementService {
     return totalMins1.compareTo(totalMins2);
   }
 
+  /// Checks whether a block entry represents movement between two different stations,
+  /// rather than work within the same station or yard.
+  static bool isInterStationMovement(BlockEntry b) {
+    final from = b.stationFrom.trim().toUpperCase();
+    final to = b.stationTo.trim().toUpperCase();
+    if (from.isEmpty) return false;
+    if (to.isEmpty || to == '_____') return false;
+    if (b.line.trim().toUpperCase() == 'YARD' || to.startsWith('ROAD')) return false;
+    return from != to;
+  }
+
   /// Compiles day-by-day items for an entire month from shifts and overrides
   static List<MovementDayItem> generateMonthDays({
     required int year,
@@ -134,8 +146,8 @@ class MovementService {
       }
     }
 
-    // Temporary storage for overnight arrival legs that carry into the next day
-    MovementRun? pendingNextDayArrival;
+    // Temporary storage for overnight or carryover runs carried into the next day
+    final List<MovementRun> pendingNextDayRuns = [];
 
     for (int day = 1; day <= daysInMonth; day++) {
       final currentDt = DateTime(year, month, day);
@@ -153,21 +165,23 @@ class MovementService {
             lastKnownStabled = lastRun.toStation.toUpperCase();
           }
         }
-        pendingNextDayArrival = null;
+        pendingNextDayRuns.clear();
         continue;
       }
 
       // 2. Check for shifts on this day
       final dayShifts = allShifts.where((s) => s.date == dateKey).toList();
 
-      // Collect any incoming overnight leg carried from yesterday
+      // Collect any incoming runs carried from yesterday
       final List<MovementRun> dayRuns = [];
-      if (pendingNextDayArrival != null) {
-        dayRuns.add(pendingNextDayArrival);
-        if (pendingNextDayArrival.toStation.isNotEmpty && !pendingNextDayArrival.toStation.contains('_')) {
-          lastKnownStabled = pendingNextDayArrival.toStation.toUpperCase();
+      if (pendingNextDayRuns.isNotEmpty) {
+        dayRuns.addAll(pendingNextDayRuns);
+        for (final p in pendingNextDayRuns) {
+          if (p.toStation.isNotEmpty && !p.toStation.contains('_')) {
+            lastKnownStabled = p.toStation.toUpperCase();
+          }
         }
-        pendingNextDayArrival = null;
+        pendingNextDayRuns.clear();
       }
 
       if (dayShifts.isNotEmpty) {
@@ -177,106 +191,113 @@ class MovementService {
             lastKnownStabled = shift.stabledStation.trim().toUpperCase();
           }
 
-          // Prioritize explicit movement entries (b.isTransit == true).
-          // If no explicit movement entries are logged, fall back to logged track blocks (b.isTransit == false).
+          // 1. Identify inter-station movements
           final transits = shift.blocks.where((b) => b.isTransit).toList();
-          final hasExplicitTransits = transits.isNotEmpty;
-          final effectiveRuns = hasExplicitTransits ? transits : shift.blocks;
+          final explicitInterStation = transits.where(isInterStationMovement).toList();
+          final blockInterStation = shift.blocks.where(isInterStationMovement).toList();
 
-          if (effectiveRuns.isNotEmpty) {
-            String from;
-            String dep;
-            String to;
-            String arr;
+          final interStationRuns = explicitInterStation.isNotEmpty
+              ? explicitInterStation
+              : blockInterStation;
 
-            if (hasExplicitTransits) {
-              // When explicit movement runs are logged:
-              // Departure is taken from the first movement run
-              final firstRun = effectiveRuns.first;
-              from = firstRun.stationFrom.trim().isNotEmpty
-                  ? firstRun.stationFrom.trim().toUpperCase()
-                  : (shift.readyStation.trim().isNotEmpty ? shift.readyStation.trim().toUpperCase() : '_____');
-              dep = firstRun.startTime.trim().isNotEmpty
-                  ? firstRun.startTime.trim()
-                  : shift.readyTime.trim();
+          if (interStationRuns.isEmpty) {
+            // Machine worked inside yard or remained stationary throughout this shift
+            final stayAt = shift.stabledStation.trim().isNotEmpty
+                ? shift.stabledStation.trim().toUpperCase()
+                : (shift.readyStation.trim().isNotEmpty
+                    ? shift.readyStation.trim().toUpperCase()
+                    : (shift.blocks.isNotEmpty ? shift.blocks.first.stationFrom.trim().toUpperCase() : lastKnownStabled));
+            if (stayAt.isNotEmpty) lastKnownStabled = stayAt;
+            continue;
+          }
 
-              // Arrival is taken from the last movement run
-              final lastRun = effectiveRuns.last;
-              final isYardRun = lastRun.line == 'Yard' || lastRun.stationTo.toUpperCase().startsWith('ROAD');
-              to = isYardRun
-                  ? (lastRun.stationFrom.trim().isNotEmpty
-                      ? lastRun.stationFrom.trim().toUpperCase()
-                      : (shift.stabledStation.trim().isNotEmpty ? shift.stabledStation.trim().toUpperCase() : '_____'))
-                  : (lastRun.stationTo.trim().isNotEmpty
-                      ? lastRun.stationTo.trim().toUpperCase()
-                      : (shift.stabledStation.trim().isNotEmpty ? shift.stabledStation.trim().toUpperCase() : '_____'));
-              arr = lastRun.endTime.trim().isNotEmpty
-                  ? lastRun.endTime.trim()
-                  : shift.stabledTime.trim();
+          // 2. Inter-station movement exists: departure station and start time
+          final firstMove = interStationRuns.first;
+          final fromStation = firstMove.stationFrom.trim().toUpperCase();
+          final depTime = firstMove.startTime.trim();
 
-              // If stabled station is given and destination station is missing/empty, use stabled station
-              if ((to.isEmpty || to == '_____') && shift.stabledStation.trim().isNotEmpty) {
-                to = shift.stabledStation.trim().toUpperCase();
-              }
-            } else {
-              // When no explicit movement runs are logged (only track blocks):
-              // Departure is taken from machine ready location & time if available, otherwise first block
-              final firstRun = effectiveRuns.first;
-              from = shift.readyStation.trim().isNotEmpty
-                  ? shift.readyStation.trim().toUpperCase()
-                  : (firstRun.stationFrom.trim().isNotEmpty ? firstRun.stationFrom.trim().toUpperCase() : '_____');
-              dep = shift.readyTime.trim().isNotEmpty
-                  ? shift.readyTime.trim()
-                  : firstRun.startTime.trim();
+          // 3. Determine arrival station and arrival time
+          String toStation;
+          String arrTime;
 
-              // Arrival is taken from machine stabled location & time if available, otherwise last block
-              final lastRun = effectiveRuns.last;
-              final isYardRun = lastRun.line == 'Yard' || lastRun.stationTo.toUpperCase().startsWith('ROAD');
-              to = shift.stabledStation.trim().isNotEmpty
-                  ? shift.stabledStation.trim().toUpperCase()
-                  : (isYardRun
-                      ? (lastRun.stationFrom.trim().isNotEmpty ? lastRun.stationFrom.trim().toUpperCase() : '_____')
-                      : (lastRun.stationTo.trim().isNotEmpty ? lastRun.stationTo.trim().toUpperCase() : '_____'));
-              arr = shift.stabledTime.trim().isNotEmpty
-                  ? shift.stabledTime.trim()
-                  : lastRun.endTime.trim();
-            }
+          if (shift.stabledTime.trim().isNotEmpty) {
+            // If machine stable has a time logged with it then that is the movement end for that day
+            arrTime = shift.stabledTime.trim();
+            toStation = shift.stabledStation.trim().isNotEmpty
+                ? shift.stabledStation.trim().toUpperCase()
+                : interStationRuns.last.stationTo.trim().toUpperCase();
+          } else {
+            // Or else it should be the last block end station and time
+            final lastBlock = shift.blocks.isNotEmpty ? shift.blocks.last : interStationRuns.last;
+            final isYard = lastBlock.line.trim().toUpperCase() == 'YARD' || lastBlock.stationTo.toUpperCase().startsWith('ROAD');
+            toStation = isYard
+                ? (lastBlock.stationFrom.trim().isNotEmpty
+                    ? lastBlock.stationFrom.trim().toUpperCase()
+                    : (shift.stabledStation.trim().isNotEmpty ? shift.stabledStation.trim().toUpperCase() : '_____'))
+                : (lastBlock.stationTo.trim().isNotEmpty
+                    ? lastBlock.stationTo.trim().toUpperCase()
+                    : (shift.stabledStation.trim().isNotEmpty ? shift.stabledStation.trim().toUpperCase() : '_____'));
+            arrTime = lastBlock.endTime.trim().isNotEmpty
+                ? lastBlock.endTime.trim()
+                : interStationRuns.last.endTime.trim();
+          }
 
-            final isNight = shift.isNightShift || isOvernightTime(dep, arr);
+          if ((toStation.isEmpty || toStation == '_____') && shift.stabledStation.trim().isNotEmpty) {
+            toStation = shift.stabledStation.trim().toUpperCase();
+          }
 
-            if (isNight) {
-              // Night Shift: Spans across midnight
-              // Day 1 (Night Departure): AFK - __ (20.21 - __ hrs)
+          // 4. Handle Night Shift vs Day Shift
+          final depHour = int.tryParse(depTime.replaceAll('.', ':').split(':')[0]) ?? 0;
+          final isNight = shift.isNightShift || isOvernightTime(depTime, arrTime);
+
+          if (isNight) {
+            if (depHour >= 12) {
+              // Movement started BEFORE 12:00 AM on Day 1 (e.g. 20:21)
+              // Day 1 (Night Departure): AFK - _____ (20.21 - _____ hrs)
               dayRuns.add(MovementRun(
-                fromStation: from,
+                fromStation: fromStation,
                 toStation: '_____',
-                departureTime: dep,
+                departureTime: depTime,
                 arrivalTime: '_____',
                 isOvernight: true,
                 isDepartureLeg: true,
               ));
 
-              // Day 2 (Morning Arrival): __ - WKI (__ - 07.14 hrs)
-              pendingNextDayArrival = MovementRun(
+              // Day 2 (Morning Arrival): _____ - WKI (_____ - 07.14 hrs)
+              pendingNextDayRuns.add(MovementRun(
                 fromStation: '_____',
-                toStation: to,
+                toStation: toStation,
                 departureTime: '_____',
-                arrivalTime: arr,
+                arrivalTime: arrTime,
                 isOvernight: true,
                 isArrivalLeg: true,
-              );
+              ));
             } else {
-              // Daytime Shift (Same day): KTYM - CGY (09.16 - 16.36 hrs)
-              dayRuns.add(MovementRun(
-                fromStation: from,
-                toStation: to,
-                departureTime: dep,
-                arrivalTime: arr,
+              // Machine got ready before 12:00 AM, but did NOT start moving until AFTER 12:00 AM
+              // Day 1 gets no departure leg (records Stay at station if dayRuns is empty).
+              // Day 2 carries the full single-day movement run
+              pendingNextDayRuns.add(MovementRun(
+                fromStation: fromStation,
+                toStation: toStation,
+                departureTime: depTime,
+                arrivalTime: arrTime,
                 isOvernight: false,
               ));
-              if (to.isNotEmpty && to != '_____') {
-                lastKnownStabled = to;
+              if (toStation.isNotEmpty && toStation != '_____') {
+                lastKnownStabled = toStation;
               }
+            }
+          } else {
+            // Daytime Shift (Same day): KTYM - CGY (09.16 - 16.36 hrs)
+            dayRuns.add(MovementRun(
+              fromStation: fromStation,
+              toStation: toStation,
+              departureTime: depTime,
+              arrivalTime: arrTime,
+              isOvernight: false,
+            ));
+            if (toStation.isNotEmpty && toStation != '_____') {
+              lastKnownStabled = toStation;
             }
           }
         }
@@ -288,12 +309,12 @@ class MovementService {
             runs: dayRuns,
           ));
         } else {
-          // No transit blocks on this day: mark Stay at station
+          // No movement runs on this day (e.g. machine worked only inside yard): mark Stay at station
           final stayAt = dayShifts.first.stabledStation.trim().isNotEmpty
               ? dayShifts.first.stabledStation.trim().toUpperCase()
               : (dayShifts.first.readyStation.trim().isNotEmpty
                   ? dayShifts.first.readyStation.trim().toUpperCase()
-                  : lastKnownStabled);
+                  : (dayShifts.first.blocks.isNotEmpty ? dayShifts.first.blocks.first.stationFrom.trim().toUpperCase() : lastKnownStabled));
           if (stayAt.isNotEmpty) lastKnownStabled = stayAt;
           result.add(MovementDayItem(
             date: dateKey,

@@ -608,7 +608,7 @@ void main() {
       expect(results.first.name, 'Guruvayur');
     });
 
-    test('MovementService takes ready and stabled place & time when only track blocks are logged', () {
+    test('MovementService calculates movement start from inter-station block and end from stabled time', () {
       const shiftWithBlocksOnly = ShiftLog(
         date: '2026-10-15',
         machineName: 'UTV005H',
@@ -640,12 +640,116 @@ void main() {
       final day15 = monthDays.firstWhere((d) => d.date == '2026-10-15');
       expect(day15.type, MovementItemType.transit);
       expect(day15.runs.length, 1);
-      // Dep taken from readyStation/readyTime
+      // Dep taken from first inter-station movement (11:00)
       expect(day15.runs.first.fromStation, 'GUV');
-      expect(day15.runs.first.departureTime, '10:00');
-      // Arr taken from stabledStation/stabledTime
+      expect(day15.runs.first.departureTime, '11:00');
+      // Arr taken from stabledStation/stabledTime (18:30 at TCR)
       expect(day15.runs.first.toStation, 'TCR');
       expect(day15.runs.first.arrivalTime, '18:30');
+    });
+
+    test('Night shift ready before midnight but moving after midnight records Stay on Day 1 and Movement on Day 2', () {
+      const nightShiftAfterMidnight = ShiftLog(
+        date: '2026-10-15',
+        machineName: 'UTV005H',
+        division: 'TVC',
+        section: 'TCR',
+        readyStation: 'WKI',
+        readyTime: '22:00',
+        isNightShift: true,
+        blocks: [
+          // Yard work inside WKI before 12:00 AM
+          BlockEntry(
+            id: 'b1',
+            startTime: '22:30',
+            endTime: '00:45',
+            stationFrom: 'WKI',
+            stationTo: 'Road 3',
+            line: 'Yard',
+            isTransit: false,
+          ),
+          // First inter-station movement starts after 12:00 AM at 03:00
+          BlockEntry(
+            id: 'b2',
+            startTime: '03:00',
+            endTime: '03:24',
+            stationFrom: 'WKI',
+            stationTo: 'MGK',
+            isTransit: true,
+          ),
+          // Last movement ends at 07:14
+          BlockEntry(
+            id: 'b3',
+            startTime: '06:40',
+            endTime: '07:14',
+            stationFrom: 'PNQ',
+            stationTo: 'TCR',
+            isTransit: true,
+          ),
+        ],
+      );
+
+      final monthDays = MovementService.generateMonthDays(
+        year: 2026,
+        month: 10,
+        historyShifts: [nightShiftAfterMidnight],
+      );
+
+      // Day 15 (Day 1): No station-to-station movement occurred before midnight -> Stay at WKI
+      final day15 = monthDays.firstWhere((d) => d.date == '2026-10-15');
+      expect(day15.type, MovementItemType.stay);
+      expect(day15.stayStation, 'WKI');
+
+      // Day 16 (Day 2): Movement started at 03:00 and ended at 07:14 at TCR
+      final day16 = monthDays.firstWhere((d) => d.date == '2026-10-16');
+      expect(day16.type, MovementItemType.transit);
+      expect(day16.runs.length, 1);
+      expect(day16.runs.first.fromStation, 'WKI');
+      expect(day16.runs.first.toStation, 'TCR');
+      expect(day16.runs.first.departureTime, '03:00');
+      expect(day16.runs.first.arrivalTime, '07:14');
+      expect(day16.runs.first.isOvernight, isFalse);
+
+      final report = MovementService.formatMovementReport(
+        year: 2026,
+        month: 10,
+        items: monthDays,
+      );
+      expect(report, contains('15.10.26 :- Stay at WKI'));
+      expect(report, contains('16.10.26 :- WKI – TCR (03.00 – 07.14 hrs)'));
+    });
+
+    test('Shift with only yard work records Stay at station', () {
+      const yardOnlyShift = ShiftLog(
+        date: '2026-10-15',
+        machineName: 'UTV005H',
+        division: 'TVC',
+        section: 'TCR',
+        readyStation: 'TCR',
+        readyTime: '09:00',
+        stabledStation: 'TCR',
+        blocks: [
+          BlockEntry(
+            id: 'b1',
+            startTime: '10:00',
+            endTime: '12:00',
+            stationFrom: 'TCR',
+            stationTo: 'Road 2',
+            line: 'Yard',
+            isTransit: false,
+          ),
+        ],
+      );
+
+      final monthDays = MovementService.generateMonthDays(
+        year: 2026,
+        month: 10,
+        historyShifts: [yardOnlyShift],
+      );
+
+      final day15 = monthDays.firstWhere((d) => d.date == '2026-10-15');
+      expect(day15.type, MovementItemType.stay);
+      expect(day15.stayStation, 'TCR');
     });
   });
 }
