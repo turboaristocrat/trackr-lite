@@ -331,10 +331,15 @@ class MovementService {
             runs: dayRuns,
           ));
         } else {
+          // Do not prefill future dates with anything
+          final now = DateTime.now();
+          final today = DateTime(now.year, now.month, now.day);
+          final isFuture = currentDt.isAfter(today);
+
           result.add(MovementDayItem(
             date: dateKey,
             type: MovementItemType.stay,
-            stayStation: lastKnownStabled,
+            stayStation: isFuture ? '' : lastKnownStabled,
           ));
         }
       }
@@ -468,9 +473,9 @@ class MovementService {
             }
 
             if (rIdx == 0) {
-              buffer.writeln('$dateDot :- { $runStr');
+              buffer.writeln('$dateDot :- $runStr');
             } else {
-              buffer.writeln('            { $runStr');
+              buffer.writeln('            $runStr');
             }
           }
         }

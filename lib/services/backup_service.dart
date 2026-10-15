@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -25,10 +26,133 @@ class BackupRestoreResult {
 }
 
 class BackupService {
+  static Timer? _autoBackupTimer;
+
   /// Generate timestamped backup file name
   static String get _backupFileName {
     final stamp = DateFormat('yyyyMMdd_HHmm').format(DateTime.now());
     return 'TRACKR_Lite_Backup_$stamp.json';
+  }
+
+  /// Initializes periodic auto-backup scheduler (checks every 30 seconds)
+  static void initAutoBackup({BuildContext? context}) {
+    _autoBackupTimer?.cancel();
+    // Immediate check on startup/route
+    checkAndRunAutoBackup(context: context);
+    // Recurring check every 30 seconds
+    _autoBackupTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      checkAndRunAutoBackup(context: context);
+    });
+  }
+
+  /// Cancels any running auto-backup timer
+  static void stopAutoBackupScheduler() {
+    _autoBackupTimer?.cancel();
+    _autoBackupTimer = null;
+  }
+
+  /// Checks if daily auto-backup to Google Drive should run now
+  static Future<bool> checkAndRunAutoBackup({BuildContext? context}) async {
+    try {
+      final enabled = await StorageService.isAutoBackupEnabled();
+      if (!enabled) return false;
+
+      final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final lastDate = await StorageService.getLastAutoBackupDate();
+      if (lastDate == todayStr) {
+        // Already successfully backed up today
+        return false;
+      }
+
+      final targetTimeStr = await StorageService.getAutoBackupTime();
+      int targetHour = 20;
+      int targetMin = 0;
+      if (targetTimeStr.contains(':')) {
+        final parts = targetTimeStr.split(':');
+        targetHour = int.tryParse(parts[0]) ?? 20;
+        targetMin = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
+      }
+
+      final now = DateTime.now();
+      final hasReachedTime = (now.hour > targetHour) ||
+          (now.hour == targetHour && now.minute >= targetMin);
+
+      if (hasReachedTime) {
+        if (context != null && !context.mounted) return false;
+        return await executeAutoBackup(context: context);
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Executes Google Drive auto-backup, saves backup file and marks completion
+  static Future<bool> executeAutoBackup({BuildContext? context, bool isManualTest = false}) async {
+    try {
+      final jsonContent = await StorageService.exportBackupJson();
+      final stamp = DateFormat('yyyyMMdd_HHmm').format(DateTime.now());
+      final fileName = 'TRACKR_Lite_AutoBackup_$stamp.json';
+
+      final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final timeStr = DateFormat('HH:mm').format(DateTime.now());
+
+      if (kIsWeb) {
+        triggerBrowserDownload(jsonContent, fileName);
+        final driveUri = Uri.parse('https://drive.google.com/drive/my-drive');
+        await launchUrl(driveUri, mode: LaunchMode.externalApplication);
+      } else {
+        final xFile = XFile.fromData(
+          utf8.encode(jsonContent),
+          mimeType: 'application/json',
+          name: fileName,
+        );
+        // ignore: deprecated_member_use
+        await Share.shareXFiles(
+          [xFile],
+          subject: 'TRACKR Lite Auto-Backup ($fileName)',
+          text: 'Google Drive Auto-Backup - TRACKR Lite backup file.',
+        );
+      }
+
+      // Record successful backup time
+      await StorageService.setLastAutoBackupCompleted(date: todayStr, time: timeStr);
+
+      if (context != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    isManualTest
+                        ? 'Auto-backup completed! Saved "$fileName"'
+                        : 'Daily Auto-Backup completed to Google Drive! ($fileName)',
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFF0F52BA),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+      return true;
+    } catch (e) {
+      if (context != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Auto-backup error: $e'),
+            backgroundColor: Colors.red.shade800,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return false;
+    }
   }
 
   /// Download or share backup JSON locally to device storage

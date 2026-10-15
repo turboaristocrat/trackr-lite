@@ -404,6 +404,33 @@ void main() {
       overrides = await StorageService.getMovementOverrides();
       expect(overrides.containsKey('2026-10-05'), isFalse);
     });
+
+    test('StorageService saves and retrieves auto backup configuration and persists in export/import', () async {
+      expect(await StorageService.isAutoBackupEnabled(), isFalse);
+      expect(await StorageService.getAutoBackupTime(), '20:00');
+
+      await StorageService.setAutoBackupEnabled(true);
+      await StorageService.setAutoBackupTime('21:30');
+      await StorageService.setLastAutoBackupCompleted(date: '2026-10-15', time: '21:30');
+
+      expect(await StorageService.isAutoBackupEnabled(), isTrue);
+      expect(await StorageService.getAutoBackupTime(), '21:30');
+      expect(await StorageService.getLastAutoBackupDate(), '2026-10-15');
+      expect(await StorageService.getLastAutoBackupTime(), '21:30');
+
+      final jsonBackup = await StorageService.exportBackupJson();
+      expect(jsonBackup, contains('"autoBackup"'));
+      expect(jsonBackup, contains('"21:30"'));
+
+      await StorageService.setAutoBackupEnabled(false);
+      await StorageService.setAutoBackupTime('08:00');
+      expect(await StorageService.isAutoBackupEnabled(), isFalse);
+
+      final ok = await StorageService.importBackupJson(jsonBackup);
+      expect(ok, isTrue);
+      expect(await StorageService.isAutoBackupEnabled(), isTrue);
+      expect(await StorageService.getAutoBackupTime(), '21:30');
+    });
   });
 
   group('MovementService', () {
@@ -495,8 +522,8 @@ void main() {
       expect(registerReport, contains('01.10.26 :- KTYM – CGY (09.16 – 16.36 hrs)'));
       expect(registerReport, contains('02.10.26 :- Stay at CGY'));
       expect(registerReport, contains('06.10.26 :- AFK – _____ (21.57 – _____ hrs)'));
-      expect(registerReport, contains('07.10.26 :- { _____ – AWY (_____ – 04.20 hrs)'));
-      expect(registerReport, contains('            { AWY – TCR (15.53 – _____ hrs)'));
+      expect(registerReport, contains('07.10.26 :- _____ – AWY (_____ – 04.20 hrs)'));
+      expect(registerReport, contains('            AWY – TCR (15.53 – _____ hrs)'));
 
       // 2. Dual date style
       final dualDateReport = MovementService.formatMovementReport(
@@ -750,6 +777,38 @@ void main() {
       final day15 = monthDays.firstWhere((d) => d.date == '2026-10-15');
       expect(day15.type, MovementItemType.stay);
       expect(day15.stayStation, 'TCR');
+    });
+
+    test('MovementService does not prefill future dates with anything', () {
+      final now = DateTime.now();
+      final futureYear = now.year + 1;
+      final shift = ShiftLog(
+        date: '$futureYear-01-01',
+        machineName: 'UTV005H',
+        division: 'TVC',
+        section: 'TCR',
+        readyStation: 'WKI',
+        stabledStation: 'WKI',
+        blocks: const [],
+      );
+
+      final monthDays = MovementService.generateMonthDays(
+        year: futureYear,
+        month: 1,
+        historyShifts: [shift],
+      );
+
+      // Future date January 5 has no shifts and no runs
+      final futureDay = monthDays.firstWhere((d) => d.date == '$futureYear-01-05');
+      expect(futureDay.type, MovementItemType.stay);
+      expect(futureDay.stayStation, isEmpty, reason: 'Future dates should not be prefilled with any station');
+
+      final report = MovementService.formatMovementReport(
+        year: futureYear,
+        month: 1,
+        items: monthDays,
+      );
+      expect(report, isNot(contains('05.01.${futureYear % 100} :- Stay at')));
     });
   });
 }

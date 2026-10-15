@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import '../models/shift_log.dart';
 import '../services/backup_service.dart';
 import '../services/storage_service.dart';
@@ -23,6 +24,11 @@ class SettingsScreenState extends State<SettingsScreen> {
   List<String> _remarkTemplates = [];
   bool _isLoading = true;
 
+  bool _autoBackupEnabled = false;
+  String _autoBackupTime = '20:00';
+  String? _lastAutoBackupDate;
+  String? _lastAutoBackupTime;
+
   @override
   void initState() {
     super.initState();
@@ -33,10 +39,19 @@ class SettingsScreenState extends State<SettingsScreen> {
     setState(() => _isLoading = true);
     final shift = await StorageService.getActiveShift();
     final templates = await StorageService.getRemarkTemplates();
+    final autoEnabled = await StorageService.isAutoBackupEnabled();
+    final autoTime = await StorageService.getAutoBackupTime();
+    final lastDate = await StorageService.getLastAutoBackupDate();
+    final lastTime = await StorageService.getLastAutoBackupTime();
+
     if (mounted) {
       setState(() {
         _activeShift = shift;
         _remarkTemplates = templates;
+        _autoBackupEnabled = autoEnabled;
+        _autoBackupTime = autoTime;
+        _lastAutoBackupDate = lastDate;
+        _lastAutoBackupTime = lastTime;
         _isLoading = false;
       });
     }
@@ -240,6 +255,59 @@ class SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _handleGoogleDriveBackup() async {
     await BackupService.backupToGoogleDrive(context);
+  }
+
+  Future<void> _pickAutoBackupTime() async {
+    int initialHour = 20;
+    int initialMinute = 0;
+    if (_autoBackupTime.contains(':')) {
+      final parts = _autoBackupTime.split(':');
+      initialHour = int.tryParse(parts[0]) ?? 20;
+      initialMinute = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
+    }
+
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: initialHour, minute: initialMinute),
+      helpText: 'Select Daily Backup Time',
+    );
+
+    if (picked != null) {
+      final formatted = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+      await StorageService.setAutoBackupTime(formatted);
+      setState(() {
+        _autoBackupTime = formatted;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Auto-backup time set to ${_formatTimeDisplay(formatted)}'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  String _formatTimeDisplay(String timeStr) {
+    if (!timeStr.contains(':')) return timeStr;
+    final parts = timeStr.split(':');
+    final h = int.tryParse(parts[0]) ?? 0;
+    final m = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
+    final time = TimeOfDay(hour: h, minute: m);
+    return time.format(context);
+  }
+
+  bool _isBackedUpToday() {
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    return _lastAutoBackupDate == today;
+  }
+
+  String _getBackupStatusText() {
+    if (_isBackedUpToday()) {
+      return 'Backed up today at ${_lastAutoBackupTime ?? _autoBackupTime}';
+    }
+    return 'Scheduled daily at ${_formatTimeDisplay(_autoBackupTime)}';
   }
 
   Future<void> _handleRestore() async {
@@ -860,6 +928,148 @@ class SettingsScreenState extends State<SettingsScreen> {
               style: TextStyle(fontSize: 12, color: AppTheme.textSecondary, height: 1.35),
             ),
             const SizedBox(height: 14),
+
+            // Automated Google Drive Backup with user-selectable time
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _autoBackupEnabled
+                      ? AppTheme.primary.withValues(alpha: 0.5)
+                      : AppTheme.borderColor,
+                  width: _autoBackupEnabled ? 1.5 : 1,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.add_to_drive_rounded, color: Color(0xFFE37400), size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Auto Backup to Google Drive',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Daily scheduled backup at your chosen time',
+                              style: TextStyle(fontSize: 11.5, color: AppTheme.textSecondary),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Switch(
+                        value: _autoBackupEnabled,
+                        activeThumbColor: AppTheme.primary,
+                        onChanged: (val) async {
+                          await StorageService.setAutoBackupEnabled(val);
+                          if (!mounted) return;
+                          setState(() => _autoBackupEnabled = val);
+                          if (val) {
+                            BackupService.checkAndRunAutoBackup(context: context);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                  if (_autoBackupEnabled) ...[
+                    const Divider(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Backup Time',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textSecondary),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _formatTimeDisplay(_autoBackupTime),
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.primary),
+                            ),
+                          ],
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: _pickAutoBackupTime,
+                          icon: const Icon(Icons.access_time_rounded, size: 16),
+                          label: const Text('Change Time'),
+                          style: OutlinedButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            foregroundColor: AppTheme.primary,
+                            side: const BorderSide(color: AppTheme.primary),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    // Status Badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _isBackedUpToday() ? Colors.green.withValues(alpha: 0.1) : Colors.amber.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _isBackedUpToday() ? Icons.check_circle_rounded : Icons.schedule_rounded,
+                            size: 14,
+                            color: _isBackedUpToday() ? AppTheme.railSafetyGreen : Colors.orange.shade800,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _getBackupStatusText(),
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: _isBackedUpToday() ? AppTheme.railSafetyGreen : Colors.orange.shade800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          await BackupService.executeAutoBackup(context: context, isManualTest: true);
+                          refreshSettings();
+                        },
+                        icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                        label: const Text('Test Auto-Backup Now', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primary,
+                          foregroundColor: Colors.white,
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
 
             // Google Drive Backup
             InkWell(

@@ -15,7 +15,7 @@ class MovementScreen extends StatefulWidget {
 
 class MovementScreenState extends State<MovementScreen> {
   DateTime _selectedMonth = DateTime.now();
-  MovementFormatStyle _style = MovementFormatStyle.register;
+  final MovementFormatStyle _style = MovementFormatStyle.register;
   bool _isLoading = true;
   List<MovementDayItem> _days = [];
   String _machineName = 'UTV005H';
@@ -280,37 +280,6 @@ class MovementScreenState extends State<MovementScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
-
-          // Style segment toggle: Register Style vs Dual Date
-          Row(
-            children: [
-              Expanded(
-                child: SegmentedButton<MovementFormatStyle>(
-                  segments: const [
-                    ButtonSegment(
-                      value: MovementFormatStyle.register,
-                      label: Text('📋 Register Style', style: TextStyle(fontSize: 12.5)),
-                      tooltip: 'Official split-day register layout with braces',
-                    ),
-                    ButtonSegment(
-                      value: MovementFormatStyle.dualDate,
-                      label: Text('💬 Dual Date', style: TextStyle(fontSize: 12.5)),
-                      tooltip: 'Compact dual-date layout for WhatsApp/Telegram',
-                    ),
-                  ],
-                  selected: {_style},
-                  onSelectionChanged: (Set<MovementFormatStyle> newSelection) {
-                    setState(() => _style = newSelection.first);
-                  },
-                  style: const ButtonStyle(
-                    visualDensity: VisualDensity.compact,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                ),
-              ),
-            ],
-          ),
         ],
       ),
     );
@@ -410,32 +379,12 @@ class MovementScreenState extends State<MovementScreen> {
     if (item.type == MovementItemType.stay) {
       final st = item.stayStation.trim().toUpperCase();
       if (st.isEmpty) {
-        return Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: AppTheme.borderColor),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.add_location_alt_outlined, size: 13, color: AppTheme.textMuted),
-                  SizedBox(width: 5),
-                  Text(
-                    'No movement logged (Tap to edit)',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.normal,
-                      color: AppTheme.textMuted,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+        return const Text(
+          '—',
+          style: TextStyle(
+            fontSize: 13,
+            color: AppTheme.textMuted,
+          ),
         );
       }
 
@@ -495,11 +444,6 @@ class MovementScreenState extends State<MovementScreen> {
           padding: const EdgeInsets.symmetric(vertical: 2),
           child: Row(
             children: [
-              if (run.isArrivalLeg) ...[
-                const Text('{ ', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)),
-              ] else if (run.isDepartureLeg) ...[
-                const Text('{ ', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)),
-              ],
               Text(
                 '$from – $to',
                 style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),

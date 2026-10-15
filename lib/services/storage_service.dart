@@ -23,6 +23,10 @@ class StorageService {
   static const _remarkTemplatesKey = 'trackr_lite_remark_templates_v2';
   static const _legacyRemarkTemplatesKey = 'trackr_lite_remark_templates';
   static const _movementOverridesKey = 'trackr_lite_movement_overrides';
+  static const _autoBackupEnabledKey = 'trackr_lite_auto_backup_enabled';
+  static const _autoBackupTimeKey = 'trackr_lite_auto_backup_time';
+  static const _lastAutoBackupDateKey = 'trackr_lite_last_auto_backup_date';
+  static const _lastAutoBackupTimeKey = 'trackr_lite_last_auto_backup_time';
 
   static const List<String> defaultRemarkTemplates = [
     'Kindly arrange one barrel diesel',
@@ -196,6 +200,43 @@ class StorageService {
   static Future<String> getDivision() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_divisionKey) ?? 'TVC';
+  }
+
+  // --- Auto Backup Settings ---
+  static Future<bool> isAutoBackupEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_autoBackupEnabledKey) ?? false;
+  }
+
+  static Future<void> setAutoBackupEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_autoBackupEnabledKey, enabled);
+  }
+
+  static Future<String> getAutoBackupTime() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_autoBackupTimeKey) ?? '20:00';
+  }
+
+  static Future<void> setAutoBackupTime(String time) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_autoBackupTimeKey, time);
+  }
+
+  static Future<String?> getLastAutoBackupDate() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_lastAutoBackupDateKey);
+  }
+
+  static Future<String?> getLastAutoBackupTime() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_lastAutoBackupTimeKey);
+  }
+
+  static Future<void> setLastAutoBackupCompleted({required String date, required String time}) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastAutoBackupDateKey, date);
+    await prefs.setString(_lastAutoBackupTimeKey, time);
   }
 
   /// Saves or updates the current shift in History datewise.
@@ -374,6 +415,12 @@ class StorageService {
       'version': '1.0.0',
       'exportedAt': DateTime.now().toIso8601String(),
       'preferences': preferences,
+      'autoBackup': {
+        'enabled': await isAutoBackupEnabled(),
+        'time': await getAutoBackupTime(),
+        'lastDate': await getLastAutoBackupDate(),
+        'lastTime': await getLastAutoBackupTime(),
+      },
       'activeShift': active.toJson(),
       'history': history.map((h) => h.toJson()).toList(),
       'notes': notes.map((n) => n.toJson()).toList(),
@@ -395,6 +442,15 @@ class StorageService {
         if (p['section'] != null) await prefs.setString(_sectionKey, p['section'] as String);
         if (p['readyStation'] != null) await prefs.setString(_readyStationKey, p['readyStation'] as String);
         if (p['stabledStation'] != null) await prefs.setString(_stabledStationKey, p['stabledStation'] as String);
+      }
+
+      if (map['autoBackup'] is Map<String, dynamic>) {
+        final ab = map['autoBackup'] as Map<String, dynamic>;
+        if (ab['enabled'] is bool) await setAutoBackupEnabled(ab['enabled'] as bool);
+        if (ab['time'] is String) await setAutoBackupTime(ab['time'] as String);
+        if (ab['lastDate'] is String && ab['lastTime'] is String) {
+          await setLastAutoBackupCompleted(date: ab['lastDate'] as String, time: ab['lastTime'] as String);
+        }
       }
 
       if (map['history'] != null) {

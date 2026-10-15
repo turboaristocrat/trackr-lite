@@ -4,6 +4,7 @@ import 'screens/movement_screen.dart';
 import 'screens/notes_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/shift_screen.dart';
+import 'services/backup_service.dart';
 import 'theme/app_theme.dart';
 import 'widgets/trackr_logo.dart';
 
@@ -41,6 +42,20 @@ class _MainScaffoldState extends State<MainScaffold> {
   final GlobalKey<HistoryScreenState> _historyKey = GlobalKey<HistoryScreenState>();
   final GlobalKey<NotesScreenState> _notesKey = GlobalKey<NotesScreenState>();
   final GlobalKey<SettingsScreenState> _settingsKey = GlobalKey<SettingsScreenState>();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      BackupService.initAutoBackup(context: context);
+    });
+  }
+
+  @override
+  void dispose() {
+    BackupService.stopAutoBackupScheduler();
+    super.dispose();
+  }
 
   void _onDataChanged() {
     _shiftKey.currentState?.refreshShift();
