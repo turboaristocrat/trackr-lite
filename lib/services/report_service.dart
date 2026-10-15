@@ -37,7 +37,11 @@ class ReportService {
       } else {
         buffer.writeln('Block – $blockIndex');
         buffer.writeln('BT: ${b.startTime} – ${b.endTime} hrs');
-        buffer.writeln('${b.stationFrom} – ${b.stationTo} (${b.line})');
+        if (b.line == 'Yard') {
+          buffer.writeln('${b.stationFrom} (Yard – ${b.stationTo})');
+        } else {
+          buffer.writeln('${b.stationFrom} – ${b.stationTo} (${b.line})');
+        }
 
         if (b.items.isNotEmpty) {
           for (final item in b.items) {

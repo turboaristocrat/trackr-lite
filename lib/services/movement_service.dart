@@ -168,9 +168,14 @@ class MovementService {
 
             // Last run provides final destination station and arrival time
             final lastRun = effectiveRuns.last;
-            final to = lastRun.stationTo.trim().isNotEmpty
-                ? lastRun.stationTo.trim().toUpperCase()
-                : (shift.stabledStation.trim().isNotEmpty ? shift.stabledStation.trim().toUpperCase() : '_____');
+            final isYardRun = lastRun.line == 'Yard' || lastRun.stationTo.toUpperCase().startsWith('ROAD');
+            final to = isYardRun
+                ? (lastRun.stationFrom.trim().isNotEmpty
+                    ? lastRun.stationFrom.trim().toUpperCase()
+                    : (shift.stabledStation.trim().isNotEmpty ? shift.stabledStation.trim().toUpperCase() : '_____'))
+                : (lastRun.stationTo.trim().isNotEmpty
+                    ? lastRun.stationTo.trim().toUpperCase()
+                    : (shift.stabledStation.trim().isNotEmpty ? shift.stabledStation.trim().toUpperCase() : '_____'));
             final arr = lastRun.endTime.trim();
 
             final isNight = shift.isNightShift || isOvernightTime(dep, arr);

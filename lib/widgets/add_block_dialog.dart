@@ -72,6 +72,8 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
   late TextEditingController _remarksCtrl;
 
   String _line = 'UP';
+  String _selectedRoad = 'Road 1';
+  final List<String> _roadOptions = List.generate(9, (i) => 'Road ${i + 1}');
   final List<_WorkItemFormItem> _workItems = [];
 
   final List<String> _railItems = [
@@ -108,6 +110,14 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
     _line = e?.line ?? 'UP';
     if (!_lineOptions.contains(_line)) {
       _line = 'UP';
+    }
+
+    if (_line == 'Yard') {
+      if (e != null && _roadOptions.contains(e.stationTo)) {
+        _selectedRoad = e.stationTo;
+      } else {
+        _selectedRoad = 'Road 1';
+      }
     }
 
     _transitDistanceCtrl = TextEditingController(
@@ -287,11 +297,19 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
 
   void _save() {
     final from = _fromCtrl.text.trim().toUpperCase();
-    final to = _toCtrl.text.trim().toUpperCase();
+    final isYard = !_isTransit && _line == 'Yard';
+    final to = isYard ? _selectedRoad : _toCtrl.text.trim().toUpperCase();
 
-    if (from.isEmpty || to.isEmpty) {
+    if (from.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter From and To stations')),
+        const SnackBar(content: Text('Please enter Station / Yard name')),
+      );
+      return;
+    }
+
+    if (!isYard && to.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter To station')),
       );
       return;
     }
@@ -336,6 +354,7 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final isYard = !_isTransit && _line == 'Yard';
 
     return Padding(
       padding: EdgeInsets.fromLTRB(16, 14, 16, 16 + bottomInset),
@@ -433,14 +452,14 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
             ),
             const SizedBox(height: 12),
 
-            // Station From and To with Station Name & Code while typing
+            // Station From and To (or Road dropdown when Yard is selected)
             Row(
               children: [
                 Expanded(
                   child: StationAutocompleteField(
                     controller: _fromCtrl,
-                    label: 'From Station',
-                    hintText: 'e.g. CGY',
+                    label: isYard ? 'Yard / Station' : 'From Station',
+                    hintText: isYard ? 'e.g. CGY Yard' : 'e.g. CGY',
                     prefixIcon: const Icon(Icons.location_on_outlined, size: 18),
                   ),
                 ),
@@ -449,12 +468,26 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
                   child: Icon(Icons.arrow_forward_rounded, color: AppTheme.textSecondary, size: 18),
                 ),
                 Expanded(
-                  child: StationAutocompleteField(
-                    controller: _toCtrl,
-                    label: 'To Station',
-                    hintText: 'e.g. CGV',
-                    prefixIcon: const Icon(Icons.pin_drop_outlined, size: 18),
-                  ),
+                  child: isYard
+                      ? DropdownButtonFormField<String>(
+                          initialValue: _roadOptions.contains(_selectedRoad) ? _selectedRoad : _roadOptions.first,
+                          decoration: const InputDecoration(
+                            labelText: 'Road',
+                            prefixIcon: Icon(Icons.alt_route_rounded, size: 18),
+                          ),
+                          items: _roadOptions.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() => _selectedRoad = val);
+                            }
+                          },
+                        )
+                      : StationAutocompleteField(
+                          controller: _toCtrl,
+                          label: 'To Station',
+                          hintText: 'e.g. CGV',
+                          prefixIcon: const Icon(Icons.pin_drop_outlined, size: 18),
+                        ),
                 ),
               ],
             ),

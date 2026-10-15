@@ -917,7 +917,9 @@ class ShiftScreenState extends State<ShiftScreen> {
                   child: Text(
                     isTransit
                         ? '${b.stationFrom}  ➔  ${b.stationTo}'
-                        : '${b.stationFrom}  ➔  ${b.stationTo}   •   ${b.line} Line',
+                        : (b.line == 'Yard'
+                            ? '${b.stationFrom}   •   Yard (${b.stationTo})'
+                            : '${b.stationFrom}  ➔  ${b.stationTo}   •   ${b.line} Line'),
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14.5,
