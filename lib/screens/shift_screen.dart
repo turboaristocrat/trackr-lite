@@ -843,21 +843,22 @@ class ShiftScreenState extends State<ShiftScreen> {
             // Top Header Line: Tag, Section & Line, Action Icons
             Row(
               children: [
-                // Block tag pill (highlighted just like Movement)
+                // Block tag pill (bold and size matched with Movement)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
                   decoration: BoxDecoration(
-                    color: AppTheme.amberAccent.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(6),
+                    color: AppTheme.amberAccent.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(7),
                     border: Border.all(
-                      color: AppTheme.amberAccent.withValues(alpha: 0.45),
+                      color: AppTheme.amberAccent.withValues(alpha: 0.5),
+                      width: 1.2,
                     ),
                   ),
                   child: Text(
                     isTransit ? 'MOVEMENT' : 'Block – ${blockNumber.toString().padLeft(2, '0')}',
                     style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12.5,
                       letterSpacing: 0.3,
                       color: AppTheme.secondary,
                     ),
@@ -865,26 +866,26 @@ class ShiftScreenState extends State<ShiftScreen> {
                 ),
                 const SizedBox(width: 8),
 
-                // Block Time Range (prominent display)
+                // Block Time Range (font size matching station font size: 15)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: AppTheme.surfaceContainerLow,
                     borderRadius: BorderRadius.circular(7),
-                    border: Border.all(color: AppTheme.borderColor),
+                    border: Border.all(color: AppTheme.borderColor, width: 1.1),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.schedule_rounded, size: 14, color: AppTheme.primary),
-                      const SizedBox(width: 5),
+                      const Icon(Icons.schedule_rounded, size: 15.5, color: AppTheme.primary),
+                      const SizedBox(width: 6),
                       Text(
                         isTransit ? '${b.startTime} – ${b.endTime}' : 'BT: ${b.startTime} – ${b.endTime}',
                         style: const TextStyle(
                           fontWeight: FontWeight.w700,
-                          fontSize: 13,
+                          fontSize: 15,
                           color: AppTheme.textPrimary,
-                          letterSpacing: 0.2,
+                          letterSpacing: 0.1,
                         ),
                       ),
                     ],
@@ -917,8 +918,8 @@ class ShiftScreenState extends State<ShiftScreen> {
             // Middle: Section Station from - to and Line
             Row(
               children: [
-                const Icon(Icons.train_outlined, size: 16, color: AppTheme.textSecondary),
-                const SizedBox(width: 6),
+                const Icon(Icons.train_outlined, size: 17, color: AppTheme.primary),
+                const SizedBox(width: 7),
                 Expanded(
                   child: Text(
                     isTransit
@@ -928,7 +929,7 @@ class ShiftScreenState extends State<ShiftScreen> {
                             : '${b.stationFrom}  ➔  ${b.stationTo}   •   ${b.line} Line'),
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 14.5,
+                      fontSize: 15,
                       letterSpacing: -0.2,
                       color: AppTheme.textPrimary,
                     ),
@@ -938,19 +939,19 @@ class ShiftScreenState extends State<ShiftScreen> {
             ),
             const SizedBox(height: 10),
 
-            // Work items / Activities
+            // Work items / Activities (big, unified and recognizable)
             if (isTransit) ...[
               if (b.output > 0)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                   decoration: BoxDecoration(
                     color: AppTheme.amberAccent.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppTheme.amberAccent.withValues(alpha: 0.3)),
+                    border: Border.all(color: AppTheme.amberAccent.withValues(alpha: 0.3), width: 1.1),
                   ),
                   child: Text(
                     'Movement Distance: ${b.output} Km',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.secondary),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.secondary),
                   ),
                 ),
             ] else ...[
@@ -962,26 +963,33 @@ class ShiftScreenState extends State<ShiftScreen> {
                       ? item.output.toInt().toString()
                       : item.output.toString();
                   return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                     decoration: BoxDecoration(
                       color: AppTheme.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppTheme.borderColor),
+                      border: Border.all(color: AppTheme.borderColor, width: 1.1),
                     ),
-                    child: RichText(
-                      text: TextSpan(
-                        style: const TextStyle(fontSize: 12, color: AppTheme.textPrimary),
-                        children: [
-                          TextSpan(
-                            text: '${item.activity}: ',
-                            style: const TextStyle(fontWeight: FontWeight.w500, color: AppTheme.textSecondary),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.layers_outlined, size: 16, color: AppTheme.secondary),
+                        const SizedBox(width: 7),
+                        RichText(
+                          text: TextSpan(
+                            style: const TextStyle(fontSize: 13.5, color: AppTheme.textPrimary),
+                            children: [
+                              TextSpan(
+                                text: '${item.activity}: ',
+                                style: const TextStyle(fontWeight: FontWeight.w600, color: AppTheme.textSecondary),
+                              ),
+                              TextSpan(
+                                text: '$outStr ${item.outputUnit}',
+                                style: const TextStyle(fontWeight: FontWeight.w800, color: AppTheme.textPrimary, fontSize: 14),
+                              ),
+                            ],
                           ),
-                          TextSpan(
-                            text: '$outStr ${item.outputUnit}',
-                            style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   );
                 }).toList(),
