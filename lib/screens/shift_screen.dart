@@ -840,10 +840,10 @@ class ShiftScreenState extends State<ShiftScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top Header Line: Tag, Section & Line, Action Icons
+            // Top Header Line: Tag & Action Icons
             Row(
               children: [
-                // Block tag pill (bold and size matched with Movement)
+                // Block tag pill (uppercase, bold amber tag matching Movement)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
                   decoration: BoxDecoration(
@@ -855,40 +855,13 @@ class ShiftScreenState extends State<ShiftScreen> {
                     ),
                   ),
                   child: Text(
-                    isTransit ? 'MOVEMENT' : 'Block – ${blockNumber.toString().padLeft(2, '0')}',
+                    isTransit ? 'MOVEMENT' : 'BLOCK – ${blockNumber.toString().padLeft(2, '0')}',
                     style: const TextStyle(
                       fontWeight: FontWeight.w800,
                       fontSize: 12.5,
-                      letterSpacing: 0.3,
+                      letterSpacing: 0.4,
                       color: AppTheme.secondary,
                     ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-
-                // Block Time Range (font size matching station font size: 15)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppTheme.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(7),
-                    border: Border.all(color: AppTheme.borderColor, width: 1.1),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.schedule_rounded, size: 15.5, color: AppTheme.primary),
-                      const SizedBox(width: 6),
-                      Text(
-                        isTransit ? '${b.startTime} – ${b.endTime}' : 'BT: ${b.startTime} – ${b.endTime}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                          color: AppTheme.textPrimary,
-                          letterSpacing: 0.1,
-                        ),
-                      ),
-                    ],
                   ),
                 ),
                 const Spacer(),
@@ -913,7 +886,34 @@ class ShiftScreenState extends State<ShiftScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
+
+            // Time Row: Moved just below the title
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(7),
+                border: Border.all(color: AppTheme.borderColor, width: 1.1),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.schedule_rounded, size: 15.5, color: AppTheme.primary),
+                  const SizedBox(width: 6),
+                  Text(
+                    isTransit ? '${b.startTime} – ${b.endTime}' : 'BT: ${b.startTime} – ${b.endTime}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      color: AppTheme.textPrimary,
+                      letterSpacing: 0.1,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
 
             // Middle: Section Station from - to and Line
             Row(
@@ -939,19 +939,21 @@ class ShiftScreenState extends State<ShiftScreen> {
             ),
             const SizedBox(height: 10),
 
-            // Work items / Activities (big, unified and recognizable)
+            // Work items / Activities (big, unified, centered on pill)
             if (isTransit) ...[
               if (b.output > 0)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
                     color: AppTheme.amberAccent.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: AppTheme.amberAccent.withValues(alpha: 0.3), width: 1.1),
                   ),
-                  child: Text(
-                    'Movement Distance: ${b.output} Km',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.secondary),
+                  child: Center(
+                    child: Text(
+                      'Movement Distance: ${b.output} Km',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5, color: AppTheme.secondary),
+                    ),
                   ),
                 ),
             ] else ...[
@@ -963,7 +965,7 @@ class ShiftScreenState extends State<ShiftScreen> {
                       ? item.output.toInt().toString()
                       : item.output.toString();
                   return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
                       color: AppTheme.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(8),
@@ -971,12 +973,15 @@ class ShiftScreenState extends State<ShiftScreen> {
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        const Icon(Icons.layers_outlined, size: 16, color: AppTheme.secondary),
-                        const SizedBox(width: 7),
+                        const Icon(Icons.layers_outlined, size: 18, color: AppTheme.secondary),
+                        const SizedBox(width: 8),
                         RichText(
+                          textAlign: TextAlign.center,
                           text: TextSpan(
-                            style: const TextStyle(fontSize: 13.5, color: AppTheme.textPrimary),
+                            style: const TextStyle(fontSize: 14.5, color: AppTheme.textPrimary),
                             children: [
                               TextSpan(
                                 text: '${item.activity}: ',
@@ -984,7 +989,7 @@ class ShiftScreenState extends State<ShiftScreen> {
                               ),
                               TextSpan(
                                 text: '$outStr ${item.outputUnit}',
-                                style: const TextStyle(fontWeight: FontWeight.w800, color: AppTheme.textPrimary, fontSize: 14),
+                                style: const TextStyle(fontWeight: FontWeight.w800, color: AppTheme.textPrimary, fontSize: 15),
                               ),
                             ],
                           ),
