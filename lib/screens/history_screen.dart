@@ -271,63 +271,46 @@ class HistoryScreenState extends State<HistoryScreen> {
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Date & Actions
-              Row(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isCompact = constraints.maxWidth < 440;
+
+              final actionsWidget = Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppTheme.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: AppTheme.borderColor),
-                    ),
-                    child: Text(
-                      displayDate,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: AppTheme.textPrimary),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    log.machineName,
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary, fontSize: 13.5),
-                  ),
-                  const Spacer(),
                   if (widget.onSelectShift != null)
-                    IconButton(
-                      icon: const Icon(Icons.edit_outlined, size: 18, color: AppTheme.primary),
-                      visualDensity: VisualDensity.compact,
+                    _buildActionButton(
+                      icon: Icons.edit_outlined,
+                      color: AppTheme.primary,
                       tooltip: 'Edit in Active Shift',
-                      onPressed: () async {
+                      onTap: () async {
                         await StorageService.saveActiveShift(log);
                         widget.onSelectShift?.call(log);
                       },
                     ),
-                  IconButton(
-                    icon: const Icon(Icons.send_rounded, size: 18, color: AppTheme.telegramBlue),
-                    visualDensity: VisualDensity.compact,
+                  _buildActionButton(
+                    icon: Icons.send_rounded,
+                    color: AppTheme.telegramBlue,
                     tooltip: 'Share to Telegram',
-                    onPressed: () => ReportService.shareToTelegram(log),
+                    onTap: () => ReportService.shareToTelegram(log),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18, color: AppTheme.whatsAppGreen),
-                    visualDensity: VisualDensity.compact,
+                  _buildActionButton(
+                    icon: Icons.chat_bubble_outline_rounded,
+                    color: AppTheme.whatsAppGreen,
                     tooltip: 'Share to WhatsApp',
-                    onPressed: () => ReportService.shareToWhatsApp(log),
+                    onTap: () => ReportService.shareToWhatsApp(log),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline_rounded, size: 18, color: AppTheme.redDanger),
-                    visualDensity: VisualDensity.compact,
+                  _buildActionButton(
+                    icon: Icons.delete_outline_rounded,
+                    color: AppTheme.redDanger,
                     tooltip: 'Delete Log',
-                    onPressed: () => _deleteShift(log.date, isNightShift: log.isNightShift),
+                    onTap: () => _deleteShift(log.date, isNightShift: log.isNightShift),
                   ),
                 ],
-              ),
-              const SizedBox(height: 10),
-              // Metrics Row
-              Row(
+              );
+
+              final metricsWidget = Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildMetricPill('${log.blockCount} Blocks', AppTheme.primary),
                   if (log.totalBlockOutput > 0) ...[
@@ -341,11 +324,115 @@ class HistoryScreenState extends State<HistoryScreen> {
                     const SizedBox(width: 8),
                     _buildMetricPill('${log.totalTransitKm} Km Run', AppTheme.amberAccent),
                   ],
-                  const Spacer(),
-                  const Text('Tap to view ➔', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
                 ],
-              ),
-            ],
+              );
+
+              if (isCompact) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppTheme.surfaceContainerLow,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: AppTheme.borderColor),
+                          ),
+                          child: Text(
+                            displayDate,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: AppTheme.textPrimary),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          log.machineName,
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary, fontSize: 13.5),
+                        ),
+                        const Spacer(),
+                        const Text('Tap to view ➔', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        metricsWidget,
+                        const Spacer(),
+                        actionsWidget,
+                      ],
+                    ),
+                  ],
+                );
+              }
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: AppTheme.borderColor),
+                        ),
+                        child: Text(
+                          displayDate,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: AppTheme.textPrimary),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        log.machineName,
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary, fontSize: 13.5),
+                      ),
+                      const Spacer(),
+                      actionsWidget,
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      metricsWidget,
+                      const Spacer(),
+                      const Text('Tap to view ➔', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                    ],
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required Color color,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            width: 34,
+            height: 34,
+            margin: const EdgeInsets.symmetric(horizontal: 2),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: color.withValues(alpha: 0.25)),
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, size: 17, color: color),
           ),
         ),
       ),
