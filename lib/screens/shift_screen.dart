@@ -843,43 +843,49 @@ class ShiftScreenState extends State<ShiftScreen> {
             // Top Header Line: Tag, Section & Line, Action Icons
             Row(
               children: [
-                // Block tag pill
+                // Block tag pill (highlighted just like Movement)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
                   decoration: BoxDecoration(
-                    color: isTransit ? AppTheme.amberAccent.withValues(alpha: 0.12) : AppTheme.surfaceContainerLow,
+                    color: AppTheme.amberAccent.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
-                      color: isTransit ? AppTheme.amberAccent.withValues(alpha: 0.35) : AppTheme.borderColor,
+                      color: AppTheme.amberAccent.withValues(alpha: 0.45),
                     ),
                   ),
                   child: Text(
-                    isTransit ? 'MOVEMENT' : 'Block – $blockNumber',
-                    style: TextStyle(
+                    isTransit ? 'MOVEMENT' : 'Block – ${blockNumber.toString().padLeft(2, '0')}',
+                    style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 11,
                       letterSpacing: 0.3,
-                      color: isTransit ? AppTheme.secondary : AppTheme.textPrimary,
+                      color: AppTheme.secondary,
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
 
-                // Block Time Range
+                // Block Time Range (prominent display)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppTheme.surfaceContainerLow.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(6),
+                    color: AppTheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(7),
+                    border: Border.all(color: AppTheme.borderColor),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.schedule_rounded, size: 12, color: AppTheme.textSecondary),
-                      const SizedBox(width: 4),
+                      const Icon(Icons.schedule_rounded, size: 14, color: AppTheme.primary),
+                      const SizedBox(width: 5),
                       Text(
                         isTransit ? '${b.startTime} – ${b.endTime}' : 'BT: ${b.startTime} – ${b.endTime}',
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppTheme.textSecondary),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          color: AppTheme.textPrimary,
+                          letterSpacing: 0.2,
+                        ),
                       ),
                     ],
                   ),

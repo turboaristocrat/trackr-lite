@@ -180,62 +180,66 @@ class MovementService {
           // Prioritize explicit movement entries (b.isTransit == true).
           // If no explicit movement entries are logged, fall back to logged track blocks (b.isTransit == false).
           final transits = shift.blocks.where((b) => b.isTransit).toList();
-          final effectiveRuns = transits.isNotEmpty ? transits : shift.blocks;
+          final hasExplicitTransits = transits.isNotEmpty;
+          final effectiveRuns = hasExplicitTransits ? transits : shift.blocks;
 
           if (effectiveRuns.isNotEmpty) {
-            // First run provides starting place and time
-            final firstRun = effectiveRuns.first;
-            String from = firstRun.stationFrom.trim().isNotEmpty
-                ? firstRun.stationFrom.trim().toUpperCase()
-                : (shift.readyStation.trim().isNotEmpty ? shift.readyStation.trim().toUpperCase() : '_____');
-            String dep = firstRun.startTime.trim();
+            String from;
+            String dep;
+            String to;
+            String arr;
 
-            // Check machine ready place & time: take whichever is first/earlier
-            final rStation = shift.readyStation.trim().toUpperCase();
-            final rTime = shift.readyTime.trim();
-            if (rTime.isNotEmpty) {
-              if (dep.isEmpty) {
-                dep = rTime;
-                if (rStation.isNotEmpty) from = rStation;
-              } else {
-                final cmp = compareShiftTimes(rTime, dep, isNightShift: shift.isNightShift);
-                if (cmp <= 0) {
-                  // Machine ready is earlier or equal
-                  dep = rTime;
-                  if (rStation.isNotEmpty) from = rStation;
-                }
+            if (hasExplicitTransits) {
+              // When explicit movement runs are logged:
+              // Departure is taken from the first movement run
+              final firstRun = effectiveRuns.first;
+              from = firstRun.stationFrom.trim().isNotEmpty
+                  ? firstRun.stationFrom.trim().toUpperCase()
+                  : (shift.readyStation.trim().isNotEmpty ? shift.readyStation.trim().toUpperCase() : '_____');
+              dep = firstRun.startTime.trim().isNotEmpty
+                  ? firstRun.startTime.trim()
+                  : shift.readyTime.trim();
+
+              // Arrival is taken from the last movement run
+              final lastRun = effectiveRuns.last;
+              final isYardRun = lastRun.line == 'Yard' || lastRun.stationTo.toUpperCase().startsWith('ROAD');
+              to = isYardRun
+                  ? (lastRun.stationFrom.trim().isNotEmpty
+                      ? lastRun.stationFrom.trim().toUpperCase()
+                      : (shift.stabledStation.trim().isNotEmpty ? shift.stabledStation.trim().toUpperCase() : '_____'))
+                  : (lastRun.stationTo.trim().isNotEmpty
+                      ? lastRun.stationTo.trim().toUpperCase()
+                      : (shift.stabledStation.trim().isNotEmpty ? shift.stabledStation.trim().toUpperCase() : '_____'));
+              arr = lastRun.endTime.trim().isNotEmpty
+                  ? lastRun.endTime.trim()
+                  : shift.stabledTime.trim();
+
+              // If stabled station is given and destination station is missing/empty, use stabled station
+              if ((to.isEmpty || to == '_____') && shift.stabledStation.trim().isNotEmpty) {
+                to = shift.stabledStation.trim().toUpperCase();
               }
-            }
+            } else {
+              // When no explicit movement runs are logged (only track blocks):
+              // Departure is taken from machine ready location & time if available, otherwise first block
+              final firstRun = effectiveRuns.first;
+              from = shift.readyStation.trim().isNotEmpty
+                  ? shift.readyStation.trim().toUpperCase()
+                  : (firstRun.stationFrom.trim().isNotEmpty ? firstRun.stationFrom.trim().toUpperCase() : '_____');
+              dep = shift.readyTime.trim().isNotEmpty
+                  ? shift.readyTime.trim()
+                  : firstRun.startTime.trim();
 
-            // Last run provides final destination station and arrival time
-            final lastRun = effectiveRuns.last;
-            final isYardRun = lastRun.line == 'Yard' || lastRun.stationTo.toUpperCase().startsWith('ROAD');
-            String to = isYardRun
-                ? (lastRun.stationFrom.trim().isNotEmpty
-                    ? lastRun.stationFrom.trim().toUpperCase()
-                    : (shift.stabledStation.trim().isNotEmpty ? shift.stabledStation.trim().toUpperCase() : '_____'))
-                : (lastRun.stationTo.trim().isNotEmpty
-                    ? lastRun.stationTo.trim().toUpperCase()
-                    : (shift.stabledStation.trim().isNotEmpty ? shift.stabledStation.trim().toUpperCase() : '_____'));
-            String arr = lastRun.endTime.trim();
-
-            // Check machine stabled place & time: take stabling if provided or later
-            final sStation = shift.stabledStation.trim().toUpperCase();
-            final sTime = shift.stabledTime.trim();
-            if (sTime.isNotEmpty) {
-              if (arr.isEmpty) {
-                arr = sTime;
-                if (sStation.isNotEmpty) to = sStation;
-              } else {
-                final cmp = compareShiftTimes(sTime, arr, isNightShift: shift.isNightShift);
-                if (cmp >= 0) {
-                  // Stabled time is later or equal to last run end time
-                  arr = sTime;
-                  if (sStation.isNotEmpty) to = sStation;
-                }
-              }
-            } else if (sStation.isNotEmpty && (to.isEmpty || to == '_____')) {
-              to = sStation;
+              // Arrival is taken from machine stabled location & time if available, otherwise last block
+              final lastRun = effectiveRuns.last;
+              final isYardRun = lastRun.line == 'Yard' || lastRun.stationTo.toUpperCase().startsWith('ROAD');
+              to = shift.stabledStation.trim().isNotEmpty
+                  ? shift.stabledStation.trim().toUpperCase()
+                  : (isYardRun
+                      ? (lastRun.stationFrom.trim().isNotEmpty ? lastRun.stationFrom.trim().toUpperCase() : '_____')
+                      : (lastRun.stationTo.trim().isNotEmpty ? lastRun.stationTo.trim().toUpperCase() : '_____'));
+              arr = shift.stabledTime.trim().isNotEmpty
+                  ? shift.stabledTime.trim()
+                  : lastRun.endTime.trim();
             }
 
             final isNight = shift.isNightShift || isOvernightTime(dep, arr);

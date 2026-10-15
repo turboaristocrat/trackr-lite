@@ -514,6 +514,7 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
                         ),
                         selected: sel,
                         selectedColor: AppTheme.primary,
+                        checkmarkColor: AppTheme.amberAccent,
                         backgroundColor: AppTheme.surfaceContainerLow,
                         onSelected: (_) => setState(() => _line = l),
                       );
@@ -544,19 +545,6 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
                 ),
               ),
               const SizedBox(height: 16),
-            ] else ...[
-              // Movement Distance
-              TextField(
-                controller: _transitDistanceCtrl,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                  labelText: 'Movement Distance (Km)',
-                  hintText: 'e.g. 18.5',
-                  prefixIcon: Icon(Icons.speed_rounded, size: 18),
-                  suffixText: 'Km',
-                ),
-              ),
-              const SizedBox(height: 12),
             ],
 
             // Remarks field
@@ -580,7 +568,9 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
               ),
               icon: const Icon(Icons.check_circle_rounded, size: 20),
               label: Text(
-                widget.initialEntry != null ? 'Update Entry' : 'Add to Shift Log',
+                _isTransit
+                    ? (widget.initialEntry != null ? 'Update Movement Log' : 'Add to Movement Log')
+                    : (widget.initialEntry != null ? 'Update Entry' : 'Add to Shift Log'),
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
               ),
             ),
