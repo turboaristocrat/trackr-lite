@@ -10,6 +10,7 @@ class StationService {
     Station(code: 'WKI', name: 'Wadakancheri', section: 'TCR', division: 'TVC'),
     Station(code: 'MGK', name: 'Mulagunnathukavu', section: 'TCR', division: 'TVC'),
     Station(code: 'PNQ', name: 'Thrissur Punkunnam', section: 'TCR', division: 'TVC'),
+    Station(code: 'GUV', name: 'Guruvayur', section: 'TCR', division: 'TVC'),
     Station(code: 'TCR', name: 'Thrissur', section: 'TCR', division: 'TVC'),
     Station(code: 'OLR', name: 'Ollur', section: 'TCR', division: 'TVC'),
     Station(code: 'PUK', name: 'Pudukad', section: 'TCR', division: 'TVC'),

@@ -68,6 +68,30 @@ class MovementService {
     return false;
   }
 
+  /// Compares two time strings ("HH:mm" or "HH.mm") within a day context or shift context.
+  /// Returns negative if t1 < t2, positive if t1 > t2, 0 if equal.
+  static int compareShiftTimes(String t1, String t2, {bool isNightShift = false}) {
+    final c1 = t1.replaceAll('.', ':').trim();
+    final c2 = t2.replaceAll('.', ':').trim();
+    if (!c1.contains(':') || !c2.contains(':')) return 0;
+    final h1 = int.tryParse(c1.split(':')[0]) ?? 0;
+    final m1 = int.tryParse(c1.split(':')[1]) ?? 0;
+    final h2 = int.tryParse(c2.split(':')[0]) ?? 0;
+    final m2 = int.tryParse(c2.split(':')[1]) ?? 0;
+
+    int totalMins1 = h1 * 60 + m1;
+    int totalMins2 = h2 * 60 + m2;
+
+    if (isNightShift) {
+      // For night shifts starting in afternoon/evening and ending next morning,
+      // map morning hours (< 12:00) to next day (+ 24*60 mins)
+      if (h1 < 12) totalMins1 += 24 * 60;
+      if (h2 < 12) totalMins2 += 24 * 60;
+    }
+
+    return totalMins1.compareTo(totalMins2);
+  }
+
   /// Compiles day-by-day items for an entire month from shifts and overrides
   static List<MovementDayItem> generateMonthDays({
     required int year,
@@ -159,24 +183,60 @@ class MovementService {
           final effectiveRuns = transits.isNotEmpty ? transits : shift.blocks;
 
           if (effectiveRuns.isNotEmpty) {
-            // First run provides departure station and time
+            // First run provides starting place and time
             final firstRun = effectiveRuns.first;
-            final from = firstRun.stationFrom.trim().isNotEmpty
+            String from = firstRun.stationFrom.trim().isNotEmpty
                 ? firstRun.stationFrom.trim().toUpperCase()
                 : (shift.readyStation.trim().isNotEmpty ? shift.readyStation.trim().toUpperCase() : '_____');
-            final dep = firstRun.startTime.trim();
+            String dep = firstRun.startTime.trim();
+
+            // Check machine ready place & time: take whichever is first/earlier
+            final rStation = shift.readyStation.trim().toUpperCase();
+            final rTime = shift.readyTime.trim();
+            if (rTime.isNotEmpty) {
+              if (dep.isEmpty) {
+                dep = rTime;
+                if (rStation.isNotEmpty) from = rStation;
+              } else {
+                final cmp = compareShiftTimes(rTime, dep, isNightShift: shift.isNightShift);
+                if (cmp <= 0) {
+                  // Machine ready is earlier or equal
+                  dep = rTime;
+                  if (rStation.isNotEmpty) from = rStation;
+                }
+              }
+            }
 
             // Last run provides final destination station and arrival time
             final lastRun = effectiveRuns.last;
             final isYardRun = lastRun.line == 'Yard' || lastRun.stationTo.toUpperCase().startsWith('ROAD');
-            final to = isYardRun
+            String to = isYardRun
                 ? (lastRun.stationFrom.trim().isNotEmpty
                     ? lastRun.stationFrom.trim().toUpperCase()
                     : (shift.stabledStation.trim().isNotEmpty ? shift.stabledStation.trim().toUpperCase() : '_____'))
                 : (lastRun.stationTo.trim().isNotEmpty
                     ? lastRun.stationTo.trim().toUpperCase()
                     : (shift.stabledStation.trim().isNotEmpty ? shift.stabledStation.trim().toUpperCase() : '_____'));
-            final arr = lastRun.endTime.trim();
+            String arr = lastRun.endTime.trim();
+
+            // Check machine stabled place & time: take stabling if provided or later
+            final sStation = shift.stabledStation.trim().toUpperCase();
+            final sTime = shift.stabledTime.trim();
+            if (sTime.isNotEmpty) {
+              if (arr.isEmpty) {
+                arr = sTime;
+                if (sStation.isNotEmpty) to = sStation;
+              } else {
+                final cmp = compareShiftTimes(sTime, arr, isNightShift: shift.isNightShift);
+                if (cmp >= 0) {
+                  // Stabled time is later or equal to last run end time
+                  arr = sTime;
+                  if (sStation.isNotEmpty) to = sStation;
+                }
+              }
+            } else if (sStation.isNotEmpty && (to.isEmpty || to == '_____')) {
+              to = sStation;
+            }
 
             final isNight = shift.isNightShift || isOvernightTime(dep, arr);
 

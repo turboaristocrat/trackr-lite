@@ -571,12 +571,13 @@ void main() {
         historyShifts: [sampleNightShift],
       );
 
-      // Day 12 item (Departure leg): AFK - _____ (20.21 - _____ hrs)
+      // Day 12 item (Departure leg): AFK - _____ (19.05 - _____ hrs)
+      // Earlier between readyTime (19:05) and first run dep (20:21) is 19:05
       final day12 = monthDays.firstWhere((d) => d.date == '2026-10-12');
       expect(day12.type, MovementItemType.transit);
       expect(day12.runs.length, 1);
       expect(day12.runs.first.fromStation, 'AFK');
-      expect(day12.runs.first.departureTime, '20:21');
+      expect(day12.runs.first.departureTime, '19:05');
       expect(day12.runs.first.isDepartureLeg, isTrue);
 
       // Day 13 item (Arrival leg): _____ - WKI (_____ - 07.14 hrs)
@@ -595,8 +596,55 @@ void main() {
         style: MovementFormatStyle.register,
       );
 
-      expect(report, contains('12.10.26 :- AFK – _____ (20.21 – _____ hrs)'));
+      expect(report, contains('12.10.26 :- AFK – _____ (19.05 – _____ hrs)'));
       expect(report, contains('13.10.26 :- _____ – WKI (_____ – 07.14 hrs)'));
+    });
+
+    test('StationService contains Guruvayur (GUV)', () {
+      final results = StationService.search('GUV');
+      expect(results, isNotEmpty);
+      expect(results.first.code, 'GUV');
+      expect(results.first.name, 'Guruvayur');
+    });
+
+    test('MovementService takes stabling place & time when provided and later than last run', () {
+      const shiftWithStabling = ShiftLog(
+        date: '2026-10-15',
+        machineName: 'UTV005H',
+        division: 'TVC',
+        section: 'TCR',
+        readyStation: 'GUV',
+        readyTime: '10:00',
+        stabledStation: 'TCR',
+        stabledTime: '18:30',
+        isNightShift: false,
+        blocks: [
+          BlockEntry(
+            id: 'b1',
+            startTime: '11:00',
+            endTime: '17:45',
+            stationFrom: 'GUV',
+            stationTo: 'PNQ',
+            isTransit: true,
+          ),
+        ],
+      );
+
+      final monthDays = MovementService.generateMonthDays(
+        year: 2026,
+        month: 10,
+        historyShifts: [shiftWithStabling],
+      );
+
+      final day15 = monthDays.firstWhere((d) => d.date == '2026-10-15');
+      expect(day15.type, MovementItemType.transit);
+      expect(day15.runs.length, 1);
+      // Dep taken from readyStation/readyTime because 10:00 < 11:00
+      expect(day15.runs.first.fromStation, 'GUV');
+      expect(day15.runs.first.departureTime, '10:00');
+      // Arr taken from stabledStation/stabledTime because 18:30 > 17:45
+      expect(day15.runs.first.toStation, 'TCR');
+      expect(day15.runs.first.arrivalTime, '18:30');
     });
   });
 }
