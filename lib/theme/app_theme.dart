@@ -155,18 +155,20 @@ class AppTheme {
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: surfaceContainerLowest,
         elevation: 0,
+        height: 68,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         indicatorColor: primary.withValues(alpha: 0.1),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return const TextStyle(color: primary, fontWeight: FontWeight.bold, fontSize: 12);
+            return const TextStyle(color: primary, fontWeight: FontWeight.bold, fontSize: 11.5, letterSpacing: 0.1);
           }
-          return const TextStyle(color: textSecondary, fontSize: 12);
+          return const TextStyle(color: textSecondary, fontSize: 11.5, letterSpacing: 0.1);
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return const IconThemeData(color: primary);
+            return const IconThemeData(color: primary, size: 22);
           }
-          return const IconThemeData(color: textSecondary);
+          return const IconThemeData(color: textSecondary, size: 22);
         }),
       ),
     );

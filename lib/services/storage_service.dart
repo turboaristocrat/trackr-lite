@@ -161,7 +161,37 @@ class StorageService {
       readyTime: '',
       stabledStation: sStation,
       stabledTime: '',
-      blocks: [],
+      blocks: const [],
+    );
+    await saveActiveShift(fresh);
+    return fresh;
+  }
+
+  /// Explicitly starts a brand new, clean shift for today with 0 blocks,
+  /// preserving machine profile and carrying over previous stabled station as ready station.
+  static Future<ShiftLog> startNewShiftForToday({String? readyStation, bool? isNightShift}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final now = DateTime.now();
+
+    final isNight = isNightShift ?? (now.hour >= 18 || now.hour < 6);
+    final mName = prefs.getString(_machineNameKey) ?? 'UTV005H';
+    final div = prefs.getString(_divisionKey) ?? 'TVC';
+    final sec = prefs.getString(_sectionKey) ?? '';
+    final rStation = readyStation ??
+        (prefs.getString(_stabledStationKey) ?? prefs.getString(_readyStationKey) ?? '');
+
+    final fresh = ShiftLog(
+      date: today,
+      machineName: mName,
+      division: div,
+      section: sec,
+      readyStation: rStation,
+      readyTime: '',
+      stabledStation: '',
+      stabledTime: '',
+      blocks: const [],
+      isNightShift: isNight,
     );
     await saveActiveShift(fresh);
     return fresh;

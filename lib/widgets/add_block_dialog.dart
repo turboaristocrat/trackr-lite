@@ -274,10 +274,25 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
     }
   }
 
-  Future<void> _pickTime(TextEditingController ctrl) async {
+  Future<void> _pickTime(TextEditingController ctrl, {TextEditingController? referenceCtrl}) async {
+    TimeOfDay initial;
+    if (ctrl.text.isNotEmpty && ctrl.text.contains(':')) {
+      final parts = ctrl.text.split(':');
+      final h = int.tryParse(parts[0]) ?? 12;
+      final m = int.tryParse(parts[1]) ?? 0;
+      initial = TimeOfDay(hour: h, minute: m);
+    } else if (referenceCtrl != null && referenceCtrl.text.isNotEmpty && referenceCtrl.text.contains(':')) {
+      final parts = referenceCtrl.text.split(':');
+      final h = int.tryParse(parts[0]) ?? 12;
+      final m = int.tryParse(parts[1]) ?? 0;
+      initial = TimeOfDay(hour: h, minute: m);
+    } else {
+      initial = TimeOfDay.now();
+    }
+
     final picked = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay.now(),
+      initialTime: initial,
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
           colorScheme: const ColorScheme.light(
@@ -435,7 +450,7 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: InkWell(
-                    onTap: () => _pickTime(_endCtrl),
+                    onTap: () => _pickTime(_endCtrl, referenceCtrl: _startCtrl),
                     borderRadius: BorderRadius.circular(12),
                     child: IgnorePointer(
                       child: TextField(

@@ -118,7 +118,7 @@ class _MainScaffoldState extends State<MainScaffold> {
           NavigationDestination(
             icon: Icon(Icons.edit_note_rounded),
             selectedIcon: Icon(Icons.edit_note_rounded),
-            label: 'Active Shift',
+            label: 'Shift',
           ),
           NavigationDestination(
             icon: Icon(Icons.alt_route_rounded),

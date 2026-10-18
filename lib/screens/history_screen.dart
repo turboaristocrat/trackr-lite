@@ -64,6 +64,137 @@ class HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
+  void _showHistoryActionSheet(ShiftLog log) {
+    String displayDate;
+    if (log.isNightShift) {
+      displayDate = '${log.formattedDate} (Night)';
+    } else {
+      try {
+        final dt = DateTime.parse(log.date);
+        displayDate = DateFormat('EEE, dd MMM yyyy').format(dt);
+      } catch (_) {
+        displayDate = log.date;
+      }
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.cardBg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.history_rounded, color: AppTheme.primary, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          displayDate,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.textPrimary),
+                        ),
+                        Text(
+                          '${log.machineName} • ${log.division} • ${log.blockCount} Blocks',
+                          style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, size: 20),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              if (widget.onSelectShift != null)
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.edit_note_rounded, color: AppTheme.primary, size: 20),
+                  ),
+                  title: const Text('Edit in Active Shift', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  subtitle: const Text('Load this shift to active editor to add or modify blocks', style: TextStyle(fontSize: 12)),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    await StorageService.saveActiveShift(log);
+                    widget.onSelectShift?.call(log);
+                  },
+                ),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.telegramBlue.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.send_rounded, color: AppTheme.telegramBlue, size: 20),
+                ),
+                title: const Text('Share to Telegram', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  ReportService.shareToTelegram(log);
+                },
+              ),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.whatsAppGreen.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.chat_bubble_outline_rounded, color: AppTheme.whatsAppGreen, size: 20),
+                ),
+                title: const Text('Share to WhatsApp', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  ReportService.shareToWhatsApp(log);
+                },
+              ),
+              const Divider(height: 12),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.redDanger.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.delete_outline_rounded, color: AppTheme.redDanger, size: 20),
+                ),
+                title: const Text('Delete Shift Log', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.redDanger)),
+                subtitle: const Text('Permanently remove this shift from history', style: TextStyle(fontSize: 12)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _deleteShift(log.date, isNightShift: log.isNightShift);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showReportDialog(ShiftLog log) {
     final text = ReportService.formatReport(log);
     showDialog(
@@ -106,6 +237,14 @@ class HistoryScreenState extends State<HistoryScreen> {
                 widget.onSelectShift?.call(log);
               },
             ),
+          TextButton.icon(
+            icon: const Icon(Icons.delete_outline_rounded, size: 16, color: AppTheme.redDanger),
+            label: const Text('Delete', style: TextStyle(color: AppTheme.redDanger, fontWeight: FontWeight.bold)),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _deleteShift(log.date, isNightShift: log.isNightShift);
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18, color: AppTheme.whatsAppGreen),
             tooltip: 'WhatsApp',
@@ -268,6 +407,7 @@ class HistoryScreenState extends State<HistoryScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         onTap: () => _showReportDialog(log),
+        onLongPress: () => _showHistoryActionSheet(log),
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(14),
@@ -309,21 +449,18 @@ class HistoryScreenState extends State<HistoryScreen> {
                 ],
               );
 
-              final metricsWidget = Row(
-                mainAxisSize: MainAxisSize.min,
+              final metricsWidget = Wrap(
+                spacing: 8,
+                runSpacing: 4,
                 children: [
                   _buildMetricPill('${log.blockCount} Blocks', AppTheme.primary),
-                  if (log.totalBlockOutput > 0) ...[
-                    const SizedBox(width: 8),
+                  if (log.totalBlockOutput > 0)
                     _buildMetricPill(
                       '${log.totalBlockOutput.toStringAsFixed(log.totalBlockOutput.truncateToDouble() == log.totalBlockOutput ? 0 : 2)} Out',
                       AppTheme.secondary,
                     ),
-                  ],
-                  if (log.totalTransitKm > 0) ...[
-                    const SizedBox(width: 8),
+                  if (log.totalTransitKm > 0)
                     _buildMetricPill('${log.totalTransitKm} Km Run', AppTheme.amberAccent),
-                  ],
                 ],
               );
 
@@ -346,19 +483,22 @@ class HistoryScreenState extends State<HistoryScreen> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Text(
-                          log.machineName,
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary, fontSize: 13.5),
+                        Expanded(
+                          child: Text(
+                            log.machineName,
+                            style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary, fontSize: 13.5),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                        const Spacer(),
-                        const Text('Tap to view ➔', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                        const Text('Hold for menu ➔', style: TextStyle(fontSize: 10.5, color: AppTheme.textMuted)),
                       ],
                     ),
                     const SizedBox(height: 10),
+                    metricsWidget,
+                    const SizedBox(height: 10),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        metricsWidget,
-                        const Spacer(),
                         actionsWidget,
                       ],
                     ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../models/block_entry.dart';
 import '../models/shift_log.dart';
 import '../services/report_service.dart';
@@ -24,6 +25,12 @@ class ShiftScreenState extends State<ShiftScreen> {
   ShiftLog? _shift;
   bool _isLoading = true;
 
+  bool get _isPastShift {
+    if (_shift == null) return false;
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    return _shift!.date != today;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -41,6 +48,205 @@ class ShiftScreenState extends State<ShiftScreen> {
     }
   }
 
+  Future<void> _startFreshShiftForToday({bool showNotice = true}) async {
+    if (_shift != null) {
+      final hasData = _shift!.blocks.isNotEmpty ||
+          _shift!.remarks.trim().isNotEmpty ||
+          _shift!.stabledStation.trim().isNotEmpty;
+      if (hasData) {
+        await StorageService.saveOrUpdateHistoryShift(_shift!);
+        widget.onShiftCompleted();
+      }
+    }
+
+    final newShift = await StorageService.startNewShiftForToday(
+      readyStation: _shift?.stabledStation.isNotEmpty == true ? _shift!.stabledStation : null,
+    );
+    setState(() => _shift = newShift);
+    if (showNotice && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Started fresh shift for today (${newShift.formattedDate})'),
+          backgroundColor: AppTheme.railSafetyGreen,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Future<void> _confirmStartNewShift() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.cardBg,
+        title: const Row(
+          children: [
+            Icon(Icons.add_circle_outline_rounded, color: AppTheme.primary, size: 20),
+            SizedBox(width: 8),
+            Text('Start Today\'s Shift', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: const Text(
+          'This will save your current shift to History and initialize a clean shift for today with 0 blocks.\n\nYour machine settings and last stabled station will be carried over automatically.',
+          style: TextStyle(fontSize: 13, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primary,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Start New Shift'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _startFreshShiftForToday();
+    }
+  }
+
+  void _showOvernightWorkInfoDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.cardBg,
+        title: const Row(
+          children: [
+            Icon(Icons.nights_stay_rounded, color: Color(0xFF6750A4), size: 20),
+            SizedBox(width: 8),
+            Text('Shift Timing Guide', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '• Day Shift:',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimary),
+            ),
+            SizedBox(height: 2),
+            Text(
+              'Starts and finishes on the same calendar day (typically 06:00 to 18:00 hrs). Formatted as a single date (e.g. 18.10.2026).',
+              style: TextStyle(fontSize: 12, color: AppTheme.textSecondary, height: 1.3),
+            ),
+            SizedBox(height: 10),
+            Text(
+              '• Overnight / Night Shift:',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF6750A4)),
+            ),
+            SizedBox(height: 2),
+            Text(
+              'Starts in the evening (>= 18:00 hrs) or early hours (< 06:00 hrs) and crosses midnight into the next morning. Formatted as dual-date (e.g. 15/16.10.2026).',
+              style: TextStyle(fontSize: 12, color: AppTheme.textSecondary, height: 1.3),
+            ),
+            SizedBox(height: 10),
+            Text(
+              'TRACKR automatically detects overnight work when machine ready time or block time is evening/night or crosses midnight.',
+              style: TextStyle(fontSize: 11.5, fontStyle: FontStyle.italic, color: AppTheme.textMuted),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Got it'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showBlockActionSheet(BlockEntry b, int blockNumber) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.cardBg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
+                    decoration: BoxDecoration(
+                      color: AppTheme.amberAccent.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(7),
+                      border: Border.all(color: AppTheme.amberAccent.withValues(alpha: 0.5)),
+                    ),
+                    child: Text(
+                      b.isTransit ? 'MOVEMENT' : 'BLOCK – ${blockNumber.toString().padLeft(2, '0')}',
+                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12, color: AppTheme.secondary),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${b.startTime} – ${b.endTime} (${b.stationFrom} → ${b.stationTo})',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimary),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, size: 20),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.edit_outlined, color: AppTheme.primary, size: 20),
+                ),
+                title: const Text('Edit Block Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                subtitle: const Text('Change time, stations, line, or rail work items', style: TextStyle(fontSize: 12)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _addOrEditBlock(existing: b);
+                },
+              ),
+              const Divider(height: 12),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.redDanger.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.delete_outline_rounded, color: AppTheme.redDanger, size: 20),
+                ),
+                title: const Text('Delete Block', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.redDanger)),
+                subtitle: const Text('Permanently remove this entry from the shift', style: TextStyle(fontSize: 12)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _deleteBlock(b.id);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _saveShift(ShiftLog updated) async {
     setState(() => _shift = updated);
     await StorageService.saveActiveShift(updated);
@@ -56,6 +262,54 @@ class ShiftScreenState extends State<ShiftScreen> {
   }
 
   Future<void> _addOrEditBlock({BlockEntry? existing, bool isTransit = false}) async {
+    if (_shift == null) return;
+
+    if (existing == null && _isPastShift) {
+      final choice = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppTheme.cardBg,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.history_rounded, color: Color(0xFFFDB324), size: 22),
+              SizedBox(width: 8),
+              Text('Past Shift Detected', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: Text(
+            'You are currently viewing a shift from ${_shift!.formattedDate}.\n\nDo you want to start a new shift for today or continue adding blocks to this past date?',
+            style: const TextStyle(fontSize: 13, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, 'cancel'),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, 'continue'),
+              child: Text('Continue on ${_shift!.formattedDate}'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.pop(ctx, 'start_today'),
+              child: const Text("Start Today's Shift"),
+            ),
+          ],
+        ),
+      );
+
+      if (choice == null || choice == 'cancel') return;
+      if (choice == 'start_today') {
+        await _startFreshShiftForToday(showNotice: false);
+      }
+    }
+
+    if (!mounted) return;
+
     final result = await AddBlockDialog.show(
       context,
       initialEntry: existing,
@@ -70,14 +324,95 @@ class ShiftScreenState extends State<ShiftScreen> {
       } else {
         blocks.add(result);
       }
-      await _saveShift(_shift!.copyWith(blocks: blocks));
+
+      // Auto-detect overnight shift if block starts in night or crosses midnight
+      bool isNight = _shift!.isNightShift;
+      if (result.startTime.isNotEmpty && result.startTime.contains(':')) {
+        final startHour = int.tryParse(result.startTime.split(':')[0]) ?? 12;
+        if (startHour >= 18 || startHour < 6) {
+          isNight = true;
+        }
+      }
+      if (result.startTime.isNotEmpty && result.endTime.isNotEmpty &&
+          result.startTime.contains(':') && result.endTime.contains(':')) {
+        final startHour = int.tryParse(result.startTime.split(':')[0]) ?? 0;
+        final endHour = int.tryParse(result.endTime.split(':')[0]) ?? 0;
+        if (startHour > endHour) {
+          isNight = true;
+        }
+      }
+
+      await _saveShift(_shift!.copyWith(
+        blocks: blocks,
+        isNightShift: isNight,
+      ));
     }
   }
 
   Future<void> _deleteBlock(String id) async {
     if (_shift == null) return;
-    final blocks = List<BlockEntry>.from(_shift!.blocks)..removeWhere((b) => b.id == id);
-    await _saveShift(_shift!.copyWith(blocks: blocks));
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.cardBg,
+        title: const Text('Delete Block?'),
+        content: const Text('Are you sure you want to delete this block entry?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.redDanger,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && _shift != null) {
+      final blocks = List<BlockEntry>.from(_shift!.blocks)..removeWhere((b) => b.id == id);
+      await _saveShift(_shift!.copyWith(blocks: blocks));
+    }
+  }
+
+  Widget _buildBlockActionButton({
+    required IconData icon,
+    required Color color,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: color == AppTheme.redDanger
+                  ? AppTheme.redDanger.withValues(alpha: 0.1)
+                  : AppTheme.surfaceContainerHigh.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: color == AppTheme.redDanger
+                    ? AppTheme.redDanger.withValues(alpha: 0.25)
+                    : AppTheme.borderColor,
+              ),
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, size: 17, color: color),
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _editSetup() async {
@@ -271,6 +606,32 @@ class ShiftScreenState extends State<ShiftScreen> {
           );
           break;
       }
+
+      if (_isPastShift) {
+        final startToday = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: AppTheme.cardBg,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Text('Start Today\'s Shift?'),
+            content: const Text('Past shift is safely archived. Would you like to initialize a clean shift for today now?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Stay on this shift'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Start Today\'s Shift'),
+              ),
+            ],
+          ),
+        );
+        if (startToday == true) {
+          await _startFreshShiftForToday();
+        }
+      }
     }
   }
 
@@ -287,6 +648,53 @@ class ShiftScreenState extends State<ShiftScreen> {
 
     return Column(
       children: [
+        // Past shift warning banner
+        if (_isPastShift)
+          Container(
+            margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFDB324).withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFD69400).withValues(alpha: 0.45)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.history_rounded, size: 18, color: Color(0xFF8A5B00)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Viewing past shift ($displayDate)',
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF5C3C00),
+                    ),
+                  ),
+                ),
+                InkWell(
+                  onTap: () => _startFreshShiftForToday(),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'Start Today',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
         // ================= TOP HEADER CARD =================
         Container(
           margin: const EdgeInsets.fromLTRB(16, 12, 16, 10),
@@ -306,7 +714,7 @@ class ShiftScreenState extends State<ShiftScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Row 1: Date Chip + Day/Night Toggle on left, Report Button on right (Never overflows)
+              // Row 1: Date Chip + Day/Night Toggle on left, + Shift + Report Button on right (Never overflows)
               Row(
                 children: [
                   // Date Chip
@@ -349,9 +757,10 @@ class ShiftScreenState extends State<ShiftScreen> {
                   ),
                   const SizedBox(width: 6),
 
-                  // Day / Night Quick Toggle Pill
+                  // Day / Night Quick Toggle Pill (Tap to toggle, Long-press for guide)
                   InkWell(
                     onTap: () => _saveShift(shift.copyWith(isNightShift: !shift.isNightShift)),
+                    onLongPress: _showOvernightWorkInfoDialog,
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -388,6 +797,42 @@ class ShiftScreenState extends State<ShiftScreen> {
                     ),
                   ),
                   const Spacer(),
+
+                  // Start Today / New Shift Button
+                  InkWell(
+                    onTap: _confirmStartNewShift,
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6.5),
+                      decoration: BoxDecoration(
+                        color: _isPastShift ? const Color(0xFFFDB324).withValues(alpha: 0.18) : AppTheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: _isPastShift ? const Color(0xFFD69400).withValues(alpha: 0.5) : AppTheme.borderColor,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.add_circle_outline_rounded,
+                            size: 14.5,
+                            color: _isPastShift ? const Color(0xFF8A5B00) : AppTheme.primary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '+ Shift',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              color: _isPastShift ? const Color(0xFF8A5B00) : AppTheme.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
 
                   // Big Report Button (Full visibility)
                   InkWell(
@@ -835,84 +1280,100 @@ class ShiftScreenState extends State<ShiftScreen> {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Top Header Line: Tag, Time Range, Action Icons
-            Row(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _addOrEditBlock(existing: b),
+          onLongPress: () => _showBlockActionSheet(b, blockNumber),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Block tag pill (uppercase, bold amber tag matching Movement)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
-                  decoration: BoxDecoration(
-                    color: AppTheme.amberAccent.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(7),
-                    border: Border.all(
-                      color: AppTheme.amberAccent.withValues(alpha: 0.5),
-                      width: 1.2,
-                    ),
-                  ),
-                  child: Text(
-                    isTransit ? 'MOVEMENT' : 'BLOCK – ${blockNumber.toString().padLeft(2, '0')}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 12.5,
-                      letterSpacing: 0.4,
-                      color: AppTheme.secondary,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
+                // Top Header Line: Responsive Wrap for Tag & Time on left, Protected Actions on right
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          // Block tag pill (uppercase, bold amber tag matching Movement)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
+                            decoration: BoxDecoration(
+                              color: AppTheme.amberAccent.withValues(alpha: 0.16),
+                              borderRadius: BorderRadius.circular(7),
+                              border: Border.all(
+                                color: AppTheme.amberAccent.withValues(alpha: 0.5),
+                                width: 1.2,
+                              ),
+                            ),
+                            child: Text(
+                              isTransit ? 'MOVEMENT' : 'BLOCK – ${blockNumber.toString().padLeft(2, '0')}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 12.5,
+                                letterSpacing: 0.4,
+                                color: AppTheme.secondary,
+                              ),
+                            ),
+                          ),
 
-                // Block Time Range (back in previous place, font size: 15)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppTheme.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(7),
-                    border: Border.all(color: AppTheme.borderColor, width: 1.1),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.schedule_rounded, size: 15.5, color: AppTheme.primary),
-                      const SizedBox(width: 6),
-                      Text(
-                        isTransit ? '${b.startTime} – ${b.endTime}' : 'BT: ${b.startTime} – ${b.endTime}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                          color: AppTheme.textPrimary,
-                          letterSpacing: 0.1,
-                        ),
+                          // Block Time Range
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppTheme.surfaceContainerLow,
+                              borderRadius: BorderRadius.circular(7),
+                              border: Border.all(color: AppTheme.borderColor, width: 1.1),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.schedule_rounded, size: 15.5, color: AppTheme.primary),
+                                const SizedBox(width: 6),
+                                Text(
+                                  isTransit ? '${b.startTime} – ${b.endTime}' : 'BT: ${b.startTime} – ${b.endTime}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 15,
+                                    color: AppTheme.textPrimary,
+                                    letterSpacing: 0.1,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-                const Spacer(),
+                    ),
+                    const SizedBox(width: 8),
 
-                // Edit & Delete Buttons
-                IconButton(
-                  icon: const Icon(Icons.edit_outlined, size: 17, color: AppTheme.textMuted),
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  tooltip: 'Edit block',
-                  onPressed: () => _addOrEditBlock(existing: b),
+                    // Edit & Delete Action Buttons (Minimum 36x36 touch area, colored background, protected from screen edge)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildBlockActionButton(
+                          icon: Icons.edit_outlined,
+                          color: AppTheme.primary,
+                          tooltip: 'Edit block',
+                          onTap: () => _addOrEditBlock(existing: b),
+                        ),
+                        const SizedBox(width: 8),
+                        _buildBlockActionButton(
+                          icon: Icons.delete_outline_rounded,
+                          color: AppTheme.redDanger,
+                          tooltip: 'Delete block',
+                          onTap: () => _deleteBlock(b.id),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline_rounded, size: 17, color: AppTheme.textMuted),
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  tooltip: 'Delete block',
-                  onPressed: () => _deleteBlock(b.id),
-                ),
-              ],
-            ),
             const SizedBox(height: 12),
 
             // Middle: Section Station from - to and Line
@@ -1025,7 +1486,9 @@ class ShiftScreenState extends State<ShiftScreen> {
           ],
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 
   Widget _buildBottomShareBar(ShiftLog shift) {
