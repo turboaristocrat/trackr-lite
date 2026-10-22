@@ -1000,8 +1000,9 @@ class ShiftScreenState extends State<ShiftScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             children: [
-              // Primary Add Block Button
+              // Primary Add Block Button (70% width)
               Expanded(
+                flex: 7,
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFDB324), // Railway Signal Yellow / Amber
@@ -1031,8 +1032,9 @@ class ShiftScreenState extends State<ShiftScreen> {
               ),
               const SizedBox(width: 8),
 
-              // + Shift Button (Same width as Add Block, Light Violet)
+              // + Shift Button (30% width, Light Violet)
               Expanded(
+                flex: 3,
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFEADBFC), // Light violet
