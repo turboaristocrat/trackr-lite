@@ -698,7 +698,7 @@ class ShiftScreenState extends State<ShiftScreen> {
         // ================= TOP HEADER CARD =================
         Container(
           margin: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: AppTheme.cardBg,
             borderRadius: BorderRadius.circular(18),
@@ -714,15 +714,16 @@ class ShiftScreenState extends State<ShiftScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Row 1: Date Chip + Day/Night Toggle on left, + Shift + Report Button on right (Never overflows)
-              Row(
-                children: [
-                  // Date Chip
-                  InkWell(
+              // Row 1: Date Chip + Day/Night Toggle on left, + Shift + Report Button on right (Responsive, never overlaps)
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isCompact = constraints.maxWidth < 365;
+
+                  final dateChip = InkWell(
                     onTap: _pickDate,
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6.5),
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
                       decoration: BoxDecoration(
                         color: shift.isNightShift
                             ? const Color(0xFF6750A4).withValues(alpha: 0.1)
@@ -754,11 +755,9 @@ class ShiftScreenState extends State<ShiftScreen> {
                         ],
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 6),
+                  );
 
-                  // Day / Night Quick Toggle Pill (Tap to toggle, Long-press for guide)
-                  InkWell(
+                  final nightDayPill = InkWell(
                     onTap: () => _saveShift(shift.copyWith(isNightShift: !shift.isNightShift)),
                     onLongPress: _showOvernightWorkInfoDialog,
                     borderRadius: BorderRadius.circular(10),
@@ -795,15 +794,13 @@ class ShiftScreenState extends State<ShiftScreen> {
                         ],
                       ),
                     ),
-                  ),
-                  const Spacer(),
+                  );
 
-                  // Start Today / New Shift Button
-                  InkWell(
+                  final newShiftButton = InkWell(
                     onTap: _confirmStartNewShift,
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6.5),
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
                       decoration: BoxDecoration(
                         color: _isPastShift ? const Color(0xFFFDB324).withValues(alpha: 0.18) : AppTheme.surfaceContainerLow,
                         borderRadius: BorderRadius.circular(10),
@@ -816,7 +813,7 @@ class ShiftScreenState extends State<ShiftScreen> {
                         children: [
                           Icon(
                             Icons.add_circle_outline_rounded,
-                            size: 14.5,
+                            size: 14,
                             color: _isPastShift ? const Color(0xFF8A5B00) : AppTheme.primary,
                           ),
                           const SizedBox(width: 4),
@@ -831,15 +828,13 @@ class ShiftScreenState extends State<ShiftScreen> {
                         ],
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 6),
+                  );
 
-                  // Big Report Button (Full visibility)
-                  InkWell(
+                  final reportButton = InkWell(
                     onTap: _previewReport,
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6.5),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
                         color: AppTheme.surfaceContainerLow,
                         borderRadius: BorderRadius.circular(10),
@@ -848,21 +843,57 @@ class ShiftScreenState extends State<ShiftScreen> {
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.description_outlined, size: 15, color: AppTheme.primary),
-                          SizedBox(width: 5),
+                          Icon(Icons.description_outlined, size: 14.5, color: AppTheme.primary),
+                          SizedBox(width: 4),
                           Text(
                             'Report',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 12.5,
+                              fontSize: 12,
                               color: AppTheme.textPrimary,
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ],
+                  );
+
+                  if (isCompact) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            dateChip,
+                            const SizedBox(width: 8),
+                            nightDayPill,
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Spacer(),
+                            newShiftButton,
+                            const SizedBox(width: 8),
+                            reportButton,
+                          ],
+                        ),
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    children: [
+                      dateChip,
+                      const SizedBox(width: 8),
+                      nightDayPill,
+                      const Spacer(),
+                      newShiftButton,
+                      const SizedBox(width: 8),
+                      reportButton,
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 10),
 
@@ -885,9 +916,12 @@ class ShiftScreenState extends State<ShiftScreen> {
                         children: [
                           const Icon(Icons.train_rounded, size: 15, color: AppTheme.primary),
                           const SizedBox(width: 5),
-                          Text(
-                            shift.machineName,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: AppTheme.primary),
+                          Flexible(
+                            child: Text(
+                              shift.machineName,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: AppTheme.primary),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ),
@@ -1202,14 +1236,26 @@ class ShiftScreenState extends State<ShiftScreen> {
         children: [
           Icon(icon, size: 16, color: color),
           const SizedBox(width: 6),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: color)),
-              const SizedBox(height: 1),
-              Text(label, style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary)),
-            ],
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: color),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  label,
+                  style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ],
+            ),
           ),
         ],
       ),

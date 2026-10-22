@@ -33,7 +33,11 @@ class WhatsAppService {
           buffer.writeln('   • *Run:* ${b.output} Km');
         } else {
           buffer.writeln('$blockIdx️⃣ *[BLOCK]* ${b.startTime} - ${b.endTime}');
-          buffer.writeln('   • *Section:* ${b.stationFrom} - ${b.stationTo} (${b.line} Line)');
+          if (b.line == 'Yard') {
+            buffer.writeln('   • *Yard:* ${b.stationFrom} (${b.stationTo})');
+          } else {
+            buffer.writeln('   • *Section:* ${b.stationFrom} - ${b.stationTo} (${b.line} Line)');
+          }
           buffer.writeln('   • *Output:* ${b.output.toStringAsFixed(b.output.truncateToDouble() == b.output ? 0 : 2)} ${b.outputUnit}');
         }
         if (b.remarks.trim().isNotEmpty) {

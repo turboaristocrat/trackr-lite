@@ -524,9 +524,12 @@ class HistoryScreenState extends State<HistoryScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        log.machineName,
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary, fontSize: 13.5),
+                      Flexible(
+                        child: Text(
+                          log.machineName,
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary, fontSize: 13.5),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       const Spacer(),
                       actionsWidget,

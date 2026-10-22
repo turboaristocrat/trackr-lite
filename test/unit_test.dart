@@ -191,6 +191,43 @@ void main() {
       );
       expect(monthEndLog.formattedDate, '31.10/01.11.2026');
     });
+
+    test('Formats yard block with Road and UP/DN M/L correctly in report', () {
+      const yardLog = ShiftLog(
+        date: '2026-10-18',
+        machineName: 'UTV005H',
+        division: 'TVC',
+        section: 'TCR',
+        blocks: [
+          BlockEntry(
+            id: 'y1',
+            startTime: '10:00',
+            endTime: '11:30',
+            stationFrom: 'WKI',
+            stationTo: 'Road 3, UP M/L',
+            line: 'Yard',
+            items: [
+              WorkItem(activity: 'Sleepers unloaded', output: 25, outputUnit: 'Nos'),
+            ],
+          ),
+          BlockEntry(
+            id: 'y2',
+            startTime: '12:00',
+            endTime: '13:00',
+            stationFrom: 'WKI',
+            stationTo: 'Road 1, DN M/L',
+            line: 'Yard',
+            items: [
+              WorkItem(activity: 'Sleepers loaded', output: 30, outputUnit: 'Nos'),
+            ],
+          ),
+        ],
+      );
+
+      final report = ReportService.formatReport(yardLog);
+      expect(report, contains('WKI (Yard – Road 3, UP M/L)'));
+      expect(report, contains('WKI (Yard – Road 1, DN M/L)'));
+    });
   });
 
   group('StorageService', () {
