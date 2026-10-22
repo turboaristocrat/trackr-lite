@@ -195,7 +195,9 @@ class ShiftScreenState extends State<ShiftScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      '${b.startTime} – ${b.endTime} (${b.stationFrom} → ${b.stationTo})',
+                      b.line == 'Yard'
+                          ? '${b.startTime} – ${b.endTime} (${ReportService.formatYardLocation(b.stationFrom, b.stationTo)})'
+                          : '${b.startTime} – ${b.endTime} (${b.stationFrom} → ${b.stationTo})',
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimary),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -714,16 +716,15 @@ class ShiftScreenState extends State<ShiftScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Row 1: Date Chip + Day/Night Toggle on left, + Shift + Report Button on right (Responsive, never overlaps)
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final isCompact = constraints.maxWidth < 365;
-
-                  final dateChip = InkWell(
+              // Row 1: Date Chip + Day/Night Toggle on left, Report Button on right (Spacious, never overlaps)
+              Row(
+                children: [
+                  // Date Chip
+                  InkWell(
                     onTap: _pickDate,
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6.5),
                       decoration: BoxDecoration(
                         color: shift.isNightShift
                             ? const Color(0xFF6750A4).withValues(alpha: 0.1)
@@ -755,9 +756,11 @@ class ShiftScreenState extends State<ShiftScreen> {
                         ],
                       ),
                     ),
-                  );
+                  ),
+                  const SizedBox(width: 8),
 
-                  final nightDayPill = InkWell(
+                  // Day / Night Quick Toggle Pill (Tap to toggle, Long-press for guide)
+                  InkWell(
                     onTap: () => _saveShift(shift.copyWith(isNightShift: !shift.isNightShift)),
                     onLongPress: _showOvernightWorkInfoDialog,
                     borderRadius: BorderRadius.circular(10),
@@ -794,47 +797,15 @@ class ShiftScreenState extends State<ShiftScreen> {
                         ],
                       ),
                     ),
-                  );
+                  ),
+                  const Spacer(),
 
-                  final newShiftButton = InkWell(
-                    onTap: _confirmStartNewShift,
-                    borderRadius: BorderRadius.circular(10),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: _isPastShift ? const Color(0xFFFDB324).withValues(alpha: 0.18) : AppTheme.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: _isPastShift ? const Color(0xFFD69400).withValues(alpha: 0.5) : AppTheme.borderColor,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.add_circle_outline_rounded,
-                            size: 14,
-                            color: _isPastShift ? const Color(0xFF8A5B00) : AppTheme.primary,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '+ Shift',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                              color: _isPastShift ? const Color(0xFF8A5B00) : AppTheme.textPrimary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-
-                  final reportButton = InkWell(
+                  // Report Button
+                  InkWell(
                     onTap: _previewReport,
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6.5),
                       decoration: BoxDecoration(
                         color: AppTheme.surfaceContainerLow,
                         borderRadius: BorderRadius.circular(10),
@@ -843,57 +814,21 @@ class ShiftScreenState extends State<ShiftScreen> {
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.description_outlined, size: 14.5, color: AppTheme.primary),
-                          SizedBox(width: 4),
+                          Icon(Icons.description_outlined, size: 15, color: AppTheme.primary),
+                          SizedBox(width: 5),
                           Text(
                             'Report',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 12,
+                              fontSize: 12.5,
                               color: AppTheme.textPrimary,
                             ),
                           ),
                         ],
                       ),
                     ),
-                  );
-
-                  if (isCompact) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            dateChip,
-                            const SizedBox(width: 8),
-                            nightDayPill,
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            const Spacer(),
-                            newShiftButton,
-                            const SizedBox(width: 8),
-                            reportButton,
-                          ],
-                        ),
-                      ],
-                    );
-                  }
-
-                  return Row(
-                    children: [
-                      dateChip,
-                      const SizedBox(width: 8),
-                      nightDayPill,
-                      const Spacer(),
-                      newShiftButton,
-                      const SizedBox(width: 8),
-                      reportButton,
-                    ],
-                  );
-                },
+                  ),
+                ],
               ),
               const SizedBox(height: 10),
 
@@ -1060,34 +995,82 @@ class ShiftScreenState extends State<ShiftScreen> {
           ),
         ),
 
-        // Single Unified Action Button (+ Log Block / Transit) - Full Width Railway Yellow
+        // Action Buttons: + Add Block / Movement (Primary) & + Shift (Shorter, adjacent)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFDB324), // Railway Signal Yellow / Amber
-                foregroundColor: const Color(0xFF191C20), // High-contrast dark typography
-                padding: const EdgeInsets.symmetric(vertical: 15),
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  side: BorderSide(color: const Color(0xFFD69400).withValues(alpha: 0.5), width: 1),
+          child: Row(
+            children: [
+              // Primary Add Block Button (longer length)
+              Expanded(
+                flex: 7,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFDB324), // Railway Signal Yellow / Amber
+                    foregroundColor: const Color(0xFF191C20), // High-contrast dark typography
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      side: BorderSide(color: const Color(0xFFD69400).withValues(alpha: 0.5), width: 1),
+                    ),
+                  ),
+                  onPressed: () => _addOrEditBlock(isTransit: false),
+                  icon: const Icon(Icons.add_rounded, size: 21, color: Color(0xFF191C20)),
+                  label: const Text(
+                    'Add Block / Movement',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      letterSpacing: 0.2,
+                      color: Color(0xFF191C20),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ),
-              onPressed: () => _addOrEditBlock(isTransit: false),
-              icon: const Icon(Icons.add_rounded, size: 22, color: Color(0xFF191C20)),
-              label: const Text(
-                'Add Block / Movement',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14.5,
-                  letterSpacing: 0.3,
-                  color: Color(0xFF191C20),
+              const SizedBox(width: 8),
+
+              // Secondary + Shift Button (smaller / shorter length)
+              Expanded(
+                flex: 3,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _isPastShift
+                        ? const Color(0xFFFDB324).withValues(alpha: 0.18)
+                        : AppTheme.surfaceContainerLow,
+                    foregroundColor: _isPastShift
+                        ? const Color(0xFF8A5B00)
+                        : AppTheme.textPrimary,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      side: BorderSide(
+                        color: _isPastShift
+                            ? const Color(0xFFD69400).withValues(alpha: 0.5)
+                            : AppTheme.borderColor,
+                        width: 1.1,
+                      ),
+                    ),
+                  ),
+                  onPressed: _confirmStartNewShift,
+                  icon: Icon(
+                    Icons.add_circle_outline_rounded,
+                    size: 16,
+                    color: _isPastShift ? const Color(0xFF8A5B00) : AppTheme.primary,
+                  ),
+                  label: Text(
+                    '+ Shift',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: _isPastShift ? const Color(0xFF8A5B00) : AppTheme.textPrimary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
         ),
 
@@ -1432,7 +1415,7 @@ class ShiftScreenState extends State<ShiftScreen> {
                     isTransit
                         ? '${b.stationFrom}  ➔  ${b.stationTo}'
                         : (b.line == 'Yard'
-                            ? '${b.stationFrom}   •   Yard (${b.stationTo})'
+                            ? ReportService.formatYardLocation(b.stationFrom, b.stationTo)
                             : '${b.stationFrom}  ➔  ${b.stationTo}   •   ${b.line} Line'),
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,

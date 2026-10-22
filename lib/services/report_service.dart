@@ -8,6 +8,23 @@ import 'web_launcher_stub.dart'
     if (dart.library.js_interop) 'web_launcher_web.dart';
 
 class ReportService {
+  static String formatYardLocation(String stationFrom, String stationTo) {
+    String stn = stationFrom.trim().toUpperCase();
+    stn = stn.replaceAll(RegExp(r'\s+(YARD|YD)$', caseSensitive: false), '').trim();
+
+    String to = stationTo.trim();
+    final roadMatch = RegExp(r'^(?:Road|Rd)\s*([1-7])', caseSensitive: false).firstMatch(to);
+    if (roadMatch != null) {
+      to = 'Rd ${roadMatch.group(1)}';
+    } else if (to.toUpperCase().contains('DN M/L') || to.toUpperCase() == 'DN') {
+      to = 'DN M/L';
+    } else if (to.toUpperCase().contains('UP M/L') || to.toUpperCase() == 'UP') {
+      to = 'UP M/L';
+    }
+
+    return '$stn Yd $to';
+  }
+
   static String formatReport(ShiftLog log) {
     final formattedDate = log.formattedDate;
 
@@ -38,7 +55,7 @@ class ReportService {
         buffer.writeln('Block – $blockIndex');
         buffer.writeln('BT: ${b.startTime} – ${b.endTime} hrs');
         if (b.line == 'Yard') {
-          buffer.writeln('${b.stationFrom} (Yard – ${b.stationTo})');
+          buffer.writeln(formatYardLocation(b.stationFrom, b.stationTo));
         } else {
           buffer.writeln('${b.stationFrom} – ${b.stationTo} (${b.line})');
         }

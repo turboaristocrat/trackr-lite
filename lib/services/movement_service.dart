@@ -100,7 +100,7 @@ class MovementService {
     final to = b.stationTo.trim().toUpperCase();
     if (from.isEmpty) return false;
     if (to.isEmpty || to == '_____') return false;
-    if (b.line.trim().toUpperCase() == 'YARD' || to.startsWith('ROAD')) return false;
+    if (b.line.trim().toUpperCase() == 'YARD' || to.startsWith('ROAD') || to.startsWith('RD') || to.contains('M/L')) return false;
     return from != to;
   }
 
@@ -229,7 +229,7 @@ class MovementService {
           } else {
             // Or else it should be the last block end station and time
             final lastBlock = shift.blocks.isNotEmpty ? shift.blocks.last : interStationRuns.last;
-            final isYard = lastBlock.line.trim().toUpperCase() == 'YARD' || lastBlock.stationTo.toUpperCase().startsWith('ROAD');
+            final isYard = lastBlock.line.trim().toUpperCase() == 'YARD' || lastBlock.stationTo.toUpperCase().startsWith('ROAD') || lastBlock.stationTo.toUpperCase().startsWith('RD') || lastBlock.stationTo.toUpperCase().contains('M/L');
             toStation = isYard
                 ? (lastBlock.stationFrom.trim().isNotEmpty
                     ? lastBlock.stationFrom.trim().toUpperCase()

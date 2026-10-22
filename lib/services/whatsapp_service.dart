@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/shift_log.dart';
+import 'report_service.dart';
 
 class WhatsAppService {
   static String formatReport(ShiftLog log) {
@@ -34,7 +35,7 @@ class WhatsAppService {
         } else {
           buffer.writeln('$blockIdx️⃣ *[BLOCK]* ${b.startTime} - ${b.endTime}');
           if (b.line == 'Yard') {
-            buffer.writeln('   • *Yard:* ${b.stationFrom} (${b.stationTo})');
+            buffer.writeln('   • *Yard:* ${ReportService.formatYardLocation(b.stationFrom, b.stationTo)}');
           } else {
             buffer.writeln('   • *Section:* ${b.stationFrom} - ${b.stationTo} (${b.line} Line)');
           }

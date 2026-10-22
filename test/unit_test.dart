@@ -1,3 +1,4 @@
+import 'package:trackr_lite/services/whatsapp_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trackr_lite/models/block_entry.dart';
@@ -192,7 +193,7 @@ void main() {
       expect(monthEndLog.formattedDate, '31.10/01.11.2026');
     });
 
-    test('Formats yard block with Road and UP/DN M/L correctly in report', () {
+    test('Formats yard block as TCR Yd DN M/L, TCR Yd UP M/L, and TCR Yd Rd 3', () {
       const yardLog = ShiftLog(
         date: '2026-10-18',
         machineName: 'UTV005H',
@@ -203,8 +204,8 @@ void main() {
             id: 'y1',
             startTime: '10:00',
             endTime: '11:30',
-            stationFrom: 'WKI',
-            stationTo: 'Road 3, UP M/L',
+            stationFrom: 'TCR',
+            stationTo: 'DN M/L',
             line: 'Yard',
             items: [
               WorkItem(activity: 'Sleepers unloaded', output: 25, outputUnit: 'Nos'),
@@ -214,19 +215,36 @@ void main() {
             id: 'y2',
             startTime: '12:00',
             endTime: '13:00',
-            stationFrom: 'WKI',
-            stationTo: 'Road 1, DN M/L',
+            stationFrom: 'TCR',
+            stationTo: 'UP M/L',
             line: 'Yard',
             items: [
               WorkItem(activity: 'Sleepers loaded', output: 30, outputUnit: 'Nos'),
+            ],
+          ),
+          BlockEntry(
+            id: 'y3',
+            startTime: '14:00',
+            endTime: '15:00',
+            stationFrom: 'TCR',
+            stationTo: 'Rd 3',
+            line: 'Yard',
+            items: [
+              WorkItem(activity: 'Sleepers unloaded', output: 15, outputUnit: 'Nos'),
             ],
           ),
         ],
       );
 
       final report = ReportService.formatReport(yardLog);
-      expect(report, contains('WKI (Yard – Road 3, UP M/L)'));
-      expect(report, contains('WKI (Yard – Road 1, DN M/L)'));
+      expect(report, contains('TCR Yd DN M/L'));
+      expect(report, contains('TCR Yd UP M/L'));
+      expect(report, contains('TCR Yd Rd 3'));
+
+      final waMessage = WhatsAppService.formatReport(yardLog);
+      expect(waMessage, contains('• *Yard:* TCR Yd DN M/L'));
+      expect(waMessage, contains('• *Yard:* TCR Yd UP M/L'));
+      expect(waMessage, contains('• *Yard:* TCR Yd Rd 3'));
     });
   });
 

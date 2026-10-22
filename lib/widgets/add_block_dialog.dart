@@ -72,10 +72,8 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
   late TextEditingController _remarksCtrl;
 
   String _line = 'UP';
-  String _selectedRoad = 'Road 1';
-  String? _selectedYardLine;
-  final List<String> _roadOptions = List.generate(7, (i) => 'Road ${i + 1}');
-  final List<String> _yardLineOptions = ['DN M/L', 'UP M/L'];
+  String _selectedYardOption = 'DN M/L'; // 'DN M/L', 'UP M/L', or 'Road'
+  String _selectedRoadNumber = '3'; // '1' through '7'
   final List<_WorkItemFormItem> _workItems = [];
 
   final List<String> _railItems = [
@@ -116,19 +114,20 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
 
     if (_line == 'Yard') {
       if (e != null) {
-        if (e.stationTo.toUpperCase().contains('DN M/L') || e.stationTo.toUpperCase().contains('DN')) {
-          _selectedYardLine = 'DN M/L';
-        } else if (e.stationTo.toUpperCase().contains('UP M/L') || e.stationTo.toUpperCase().contains('UP')) {
-          _selectedYardLine = 'UP M/L';
-        }
-        final match = RegExp(r'Road\s*([1-7])', caseSensitive: false).firstMatch(e.stationTo);
-        if (match != null) {
-          _selectedRoad = 'Road ${match.group(1)}';
-        } else if (_roadOptions.contains(e.stationTo)) {
-          _selectedRoad = e.stationTo;
+        final toUpper = e.stationTo.toUpperCase();
+        if (toUpper.contains('DN M/L') || toUpper == 'DN') {
+          _selectedYardOption = 'DN M/L';
+        } else if (toUpper.contains('UP M/L') || toUpper == 'UP') {
+          _selectedYardOption = 'UP M/L';
         } else {
-          _selectedRoad = 'Road 1';
+          _selectedYardOption = 'Road';
+          final match = RegExp(r'(?:Road|Rd)\s*([1-7])', caseSensitive: false).firstMatch(e.stationTo);
+          if (match != null) {
+            _selectedRoadNumber = match.group(1)!;
+          }
         }
+      } else {
+        _selectedYardOption = 'DN M/L';
       }
     }
 
@@ -333,20 +332,21 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
       return;
     }
 
-    if (isYard && _selectedYardLine == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select either DN M/L or UP M/L for Yard')),
-      );
-      return;
-    }
-
-    final to = isYard ? '$_selectedRoad, $_selectedYardLine' : _toCtrl.text.trim().toUpperCase();
-
-    if (!isYard && to.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter To station')),
-      );
-      return;
+    String to;
+    if (isYard) {
+      if (_selectedYardOption == 'Road') {
+        to = 'Rd $_selectedRoadNumber';
+      } else {
+        to = _selectedYardOption;
+      }
+    } else {
+      to = _toCtrl.text.trim().toUpperCase();
+      if (to.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please enter To station')),
+        );
+        return;
+      }
     }
 
     final List<WorkItem> builtItems = [];
@@ -520,7 +520,7 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
                             setState(() {
                               _line = l;
                               if (_line != 'Yard') {
-                                _selectedYardLine = null;
+                                _selectedYardOption = 'DN M/L';
                               }
                             });
                           },
@@ -531,63 +531,102 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
                 ],
               ),
               if (isYard) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
-                    color: _selectedYardLine == null
-                        ? AppTheme.primary.withValues(alpha: 0.08)
-                        : AppTheme.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: _selectedYardLine == null
-                          ? AppTheme.primary.withValues(alpha: 0.35)
-                          : AppTheme.borderColor,
-                      width: 1.2,
-                    ),
+                    color: AppTheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.borderColor),
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        Icons.alt_route_rounded,
-                        size: 16,
-                        color: _selectedYardLine == null ? AppTheme.primary : AppTheme.textSecondary,
+                      Row(
+                        children: [
+                          const Icon(Icons.alt_route_rounded, size: 16, color: AppTheme.primary),
+                          const SizedBox(width: 6),
+                          const Text(
+                            'Yard Track: ',
+                            style: TextStyle(
+                              color: AppTheme.textPrimary,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Wrap(
+                            spacing: 8,
+                            children: ['DN M/L', 'UP M/L', 'Road'].map((opt) {
+                              final sel = _selectedYardOption == opt;
+                              return ChoiceChip(
+                                label: Text(
+                                  opt,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: sel ? FontWeight.bold : FontWeight.w600,
+                                    color: sel ? Colors.white : AppTheme.textPrimary,
+                                  ),
+                                ),
+                                selected: sel,
+                                selectedColor: AppTheme.primary,
+                                checkmarkColor: AppTheme.amberAccent,
+                                backgroundColor: AppTheme.cardBg,
+                                onSelected: (_) {
+                                  setState(() {
+                                    _selectedYardOption = opt;
+                                  });
+                                },
+                              );
+                            }).toList(),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Yard Line: ',
-                        style: TextStyle(
-                          color: _selectedYardLine == null ? AppTheme.primary : AppTheme.textSecondary,
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Wrap(
-                        spacing: 8,
-                        children: _yardLineOptions.map((yl) {
-                          final sel = _selectedYardLine == yl;
-                          return ChoiceChip(
-                            label: Text(
-                              yl,
+                      if (_selectedYardOption == 'Road') ...[
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            const Text(
+                              'Road No: ',
                               style: TextStyle(
+                                color: AppTheme.textSecondary,
                                 fontSize: 12,
-                                fontWeight: sel ? FontWeight.bold : FontWeight.w600,
-                                color: sel ? Colors.white : AppTheme.textPrimary,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                            selected: sel,
-                            selectedColor: AppTheme.primary,
-                            checkmarkColor: AppTheme.amberAccent,
-                            backgroundColor: AppTheme.cardBg,
-                            onSelected: (_) {
-                              setState(() {
-                                _selectedYardLine = yl;
-                              });
-                            },
-                          );
-                        }).toList(),
-                      ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: List.generate(7, (i) => '${i + 1}').map((numStr) {
+                                  final sel = _selectedRoadNumber == numStr;
+                                  return ChoiceChip(
+                                    label: Text(
+                                      'Rd $numStr',
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: sel ? FontWeight.bold : FontWeight.w500,
+                                        color: sel ? Colors.white : AppTheme.textPrimary,
+                                      ),
+                                    ),
+                                    selected: sel,
+                                    selectedColor: AppTheme.primary,
+                                    checkmarkColor: AppTheme.amberAccent,
+                                    backgroundColor: AppTheme.cardBg,
+                                    visualDensity: VisualDensity.compact,
+                                    onSelected: (_) {
+                                      setState(() {
+                                        _selectedRoadNumber = numStr;
+                                      });
+                                    },
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -595,64 +634,56 @@ class _AddBlockDialogState extends State<AddBlockDialog> {
               const SizedBox(height: 12),
             ],
 
-            // Station From and To (or Road dropdown when Yard is selected)
+            // Station From and To (or single station + badge when Yard is selected)
             Row(
               children: [
                 Expanded(
                   child: StationAutocompleteField(
                     controller: _fromCtrl,
                     label: isYard ? 'Yard / Station' : 'From Station',
-                    hintText: isYard ? 'e.g. CGY Yard' : 'e.g. CGY',
+                    hintText: isYard ? 'e.g. TCR' : 'e.g. CGY',
                     prefixIcon: const Icon(Icons.location_on_outlined, size: 18),
                   ),
                 ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 6),
-                  child: Icon(Icons.arrow_forward_rounded, color: AppTheme.textSecondary, size: 18),
-                ),
-                Expanded(
-                  child: isYard
-                      ? InkWell(
-                          onTap: _selectedYardLine == null
-                              ? () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Please select either DN M/L or UP M/L first'),
-                                      duration: Duration(seconds: 2),
-                                    ),
-                                  );
-                                }
-                              : null,
-                          child: IgnorePointer(
-                            ignoring: _selectedYardLine == null,
-                            child: Opacity(
-                              opacity: _selectedYardLine == null ? 0.45 : 1.0,
-                              child: DropdownButtonFormField<String>(
-                                initialValue: _selectedYardLine == null
-                                    ? null
-                                    : (_roadOptions.contains(_selectedRoad) ? _selectedRoad : _roadOptions.first),
-                                decoration: InputDecoration(
-                                  labelText: 'Road',
-                                  hintText: _selectedYardLine == null ? 'Select Line first' : 'Select Road',
-                                  prefixIcon: const Icon(Icons.linear_scale_rounded, size: 18),
-                                ),
-                                items: _roadOptions.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
-                                onChanged: (val) {
-                                  if (val != null) {
-                                    setState(() => _selectedRoad = val);
-                                  }
-                                },
-                              ),
-                            ),
+                if (!isYard) ...[
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 6),
+                    child: Icon(Icons.arrow_forward_rounded, color: AppTheme.textSecondary, size: 18),
+                  ),
+                  Expanded(
+                    child: StationAutocompleteField(
+                      controller: _toCtrl,
+                      label: 'To Station',
+                      hintText: 'e.g. CGV',
+                      prefixIcon: const Icon(Icons.pin_drop_outlined, size: 18),
+                    ),
+                  ),
+                ] else ...[
+                  const SizedBox(width: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.borderColor),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.alt_route_rounded, size: 17, color: AppTheme.primary),
+                        const SizedBox(width: 6),
+                        Text(
+                          _selectedYardOption == 'Road' ? 'Rd $_selectedRoadNumber' : _selectedYardOption,
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primary,
                           ),
-                        )
-                      : StationAutocompleteField(
-                          controller: _toCtrl,
-                          label: 'To Station',
-                          hintText: 'e.g. CGV',
-                          prefixIcon: const Icon(Icons.pin_drop_outlined, size: 18),
                         ),
-                ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: 14),
