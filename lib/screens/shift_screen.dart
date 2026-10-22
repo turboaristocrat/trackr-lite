@@ -995,19 +995,18 @@ class ShiftScreenState extends State<ShiftScreen> {
           ),
         ),
 
-        // Action Buttons: + Add Block / Movement (Primary) & + Shift (Shorter, adjacent)
+        // Action Buttons: + Add Block / Movement & + Shift (Equal width side-by-side)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             children: [
-              // Primary Add Block Button (longer length)
+              // Primary Add Block Button
               Expanded(
-                flex: 7,
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFDB324), // Railway Signal Yellow / Amber
                     foregroundColor: const Color(0xFF191C20), // High-contrast dark typography
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
@@ -1015,58 +1014,56 @@ class ShiftScreenState extends State<ShiftScreen> {
                     ),
                   ),
                   onPressed: () => _addOrEditBlock(isTransit: false),
-                  icon: const Icon(Icons.add_rounded, size: 21, color: Color(0xFF191C20)),
-                  label: const Text(
-                    'Add Block / Movement',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      letterSpacing: 0.2,
-                      color: Color(0xFF191C20),
+                  icon: const Icon(Icons.add_rounded, size: 20, color: Color(0xFF191C20)),
+                  label: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      'Add Block / Movement',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        letterSpacing: 0.2,
+                        color: Color(0xFF191C20),
+                      ),
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
               const SizedBox(width: 8),
 
-              // Secondary + Shift Button (smaller / shorter length)
+              // + Shift Button (Same width as Add Block, Light Violet)
               Expanded(
-                flex: 3,
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _isPastShift
-                        ? const Color(0xFFFDB324).withValues(alpha: 0.18)
-                        : AppTheme.surfaceContainerLow,
-                    foregroundColor: _isPastShift
-                        ? const Color(0xFF8A5B00)
-                        : AppTheme.textPrimary,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    backgroundColor: const Color(0xFFEADBFC), // Light violet
+                    foregroundColor: const Color(0xFF4A148C), // High-contrast deep violet typography
+                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                       side: BorderSide(
-                        color: _isPastShift
-                            ? const Color(0xFFD69400).withValues(alpha: 0.5)
-                            : AppTheme.borderColor,
+                        color: const Color(0xFFC7B2F6).withValues(alpha: 0.8),
                         width: 1.1,
                       ),
                     ),
                   ),
                   onPressed: _confirmStartNewShift,
-                  icon: Icon(
+                  icon: const Icon(
                     Icons.add_circle_outline_rounded,
-                    size: 16,
-                    color: _isPastShift ? const Color(0xFF8A5B00) : AppTheme.primary,
+                    size: 19,
+                    color: Color(0xFF4A148C),
                   ),
-                  label: Text(
-                    '+ Shift',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      color: _isPastShift ? const Color(0xFF8A5B00) : AppTheme.textPrimary,
+                  label: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      '+ Shift',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        letterSpacing: 0.2,
+                        color: Color(0xFF4A148C),
+                      ),
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
