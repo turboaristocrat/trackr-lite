@@ -131,6 +131,52 @@ void main() {
       expect(report, contains('= 25 nos'));
     });
 
+    test('Groups similar items together in Total and across blocks', () {
+      const log = ShiftLog(
+        date: '2026-10-22',
+        machineName: 'UTV005H',
+        division: 'TVC',
+        section: 'TCR',
+        blocks: [
+          BlockEntry(
+            id: 'b1',
+            startTime: '22:00',
+            endTime: '22:45',
+            stationFrom: 'TCR',
+            stationTo: 'WKI',
+            line: 'UP',
+            items: [
+              WorkItem(activity: 'Rails loaded', output: 11, outputUnit: 'Nos'),
+              WorkItem(activity: 'Crossing loaded', output: 2, outputUnit: 'Nos'),
+            ],
+          ),
+          BlockEntry(
+            id: 'b2',
+            startTime: '23:00',
+            endTime: '23:55',
+            stationFrom: 'WKI',
+            stationTo: 'TCR',
+            line: 'DN',
+            items: [
+              WorkItem(activity: 'Rails unloaded', output: 11, outputUnit: 'Nos'),
+              WorkItem(activity: 'Crossing unloaded', output: 2, outputUnit: 'Nos'),
+            ],
+          ),
+        ],
+      );
+
+      final report = ReportService.formatReport(log);
+
+      final expectedTotal = '''Total:
+Rails loaded: 11 Nos
+Rails unloaded: 11 Nos
+Crossing loaded: 2 Nos
+Crossing unloaded: 2 Nos
+= 26 nos''';
+
+      expect(report, contains(expectedTotal));
+    });
+
     test('Includes shift remarks after machine stabled section', () {
       const log = ShiftLog(
         date: '2026-09-12',

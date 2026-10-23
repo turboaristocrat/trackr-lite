@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/block_entry.dart';
@@ -530,11 +531,29 @@ class ShiftScreenState extends State<ShiftScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.cardBg,
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.preview_rounded, color: AppTheme.primary, size: 20),
-            SizedBox(width: 8),
-            Text('Report Preview', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            const Icon(Icons.preview_rounded, color: AppTheme.primary, size: 20),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text('Report Preview', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            ),
+            IconButton(
+              tooltip: 'Copy Report',
+              icon: const Icon(Icons.copy_rounded, size: 19, color: AppTheme.primary),
+              onPressed: () async {
+                await Clipboard.setData(ClipboardData(text: text));
+                if (ctx.mounted) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(
+                      content: Text('Report copied to clipboard!'),
+                      duration: Duration(seconds: 2),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+            ),
           ],
         ),
         content: SingleChildScrollView(
@@ -548,8 +567,27 @@ class ShiftScreenState extends State<ShiftScreen> {
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Close'),
           ),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.copy_rounded, size: 16),
+            label: const Text('Copy'),
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: text));
+              if (ctx.mounted) {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  const SnackBar(
+                    content: Text('Report copied to clipboard!'),
+                    duration: Duration(seconds: 2),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+          ),
           ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.telegramBlue),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.telegramBlue,
+              foregroundColor: Colors.white,
+            ),
             icon: const Icon(Icons.send_rounded, size: 16),
             label: const Text('Telegram'),
             onPressed: () async {

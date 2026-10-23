@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/shift_log.dart';
+import '../models/block_entry.dart';
 
 import 'web_launcher_stub.dart'
     if (dart.library.js_interop) 'web_launcher_web.dart';
@@ -61,7 +62,32 @@ class ReportService {
         }
 
         if (b.items.isNotEmpty) {
-          for (final item in b.items) {
+          final itemsToPrint = List<WorkItem>.from(b.items);
+          if (itemsToPrint.length > 1) {
+            final baseFirstSeenInBlock = <String, int>{};
+            int seen = 0;
+            for (final itm in itemsToPrint) {
+              final (base, _) = ShiftLog.parseActivity(itm.activity);
+              baseFirstSeenInBlock.putIfAbsent(base.toLowerCase(), () => seen++);
+            }
+            itemsToPrint.sort((a, b) {
+              final (baseA, actionA) = ShiftLog.parseActivity(a.activity);
+              final (baseB, actionB) = ShiftLog.parseActivity(b.activity);
+              if (baseA.toLowerCase() != baseB.toLowerCase()) {
+                final orderA = baseFirstSeenInBlock[baseA.toLowerCase()] ?? 999;
+                final orderB = baseFirstSeenInBlock[baseB.toLowerCase()] ?? 999;
+                return orderA.compareTo(orderB);
+              }
+              final rankA = ShiftLog.actionRank(actionA);
+              final rankB = ShiftLog.actionRank(actionB);
+              if (rankA != rankB) {
+                return rankA.compareTo(rankB);
+              }
+              return a.activity.compareTo(b.activity);
+            });
+          }
+
+          for (final item in itemsToPrint) {
             final outputStr = item.output.truncateToDouble() == item.output
                 ? item.output.toInt().toString()
                 : item.output.toString();

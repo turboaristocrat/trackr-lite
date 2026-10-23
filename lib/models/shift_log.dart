@@ -73,20 +73,86 @@ class ShiftLog {
   int get blockCount => blocks.where((b) => !b.isTransit).length;
   int get transitCount => blocks.where((b) => b.isTransit).length;
 
-  // Group outputs by activity across all items in all blocks
+  // Helper to split activity into base material and action (e.g. 'Rails loaded' -> ('Rails', 'loaded'))
+  static (String base, String action) parseActivity(String activity) {
+    final trimmed = activity.trim();
+    final match = RegExp(
+      r'^(.*?)\s+(loaded|unloaded|loading|unloading)$',
+      caseSensitive: false,
+    ).firstMatch(trimmed);
+
+    if (match != null) {
+      final base = match.group(1)!.trim();
+      final action = match.group(2)!.trim().toLowerCase();
+      return (base, action);
+    }
+    return (trimmed, '');
+  }
+
+  // Priority ranking for actions within the same base material
+  static int actionRank(String action) {
+    switch (action.toLowerCase()) {
+      case 'loaded':
+      case 'loading':
+        return 0;
+      case 'unloaded':
+      case 'unloading':
+        return 1;
+      default:
+        return 2;
+    }
+  }
+
+  // Group outputs by activity across all items in all blocks (similar items kept together)
   Map<String, double> get outputByActivity {
-    final map = <String, double>{};
+    final rawMap = <String, double>{};
+    final baseFirstSeen = <String, int>{};
+    int seenOrder = 0;
+
     for (final b in blocks) {
       if (!b.isTransit) {
         for (final item in b.items) {
           if (item.output > 0) {
             final act = item.activity.trim().isNotEmpty ? item.activity.trim() : 'Output';
-            map[act] = (map[act] ?? 0.0) + item.output;
+            rawMap[act] = (rawMap[act] ?? 0.0) + item.output;
+
+            final (base, _) = parseActivity(act);
+            baseFirstSeen.putIfAbsent(base.toLowerCase(), () => seenOrder++);
           }
         }
       }
     }
-    return map;
+
+    if (rawMap.isEmpty) return rawMap;
+
+    // Sort entries so similar items (e.g. Rails loaded & Rails unloaded) are adjacent
+    final sortedKeys = rawMap.keys.toList()
+      ..sort((a, b) {
+        final (baseA, actionA) = parseActivity(a);
+        final (baseB, actionB) = parseActivity(b);
+
+        // Group by base material order of first appearance
+        if (baseA.toLowerCase() != baseB.toLowerCase()) {
+          final orderA = baseFirstSeen[baseA.toLowerCase()] ?? 999;
+          final orderB = baseFirstSeen[baseB.toLowerCase()] ?? 999;
+          return orderA.compareTo(orderB);
+        }
+
+        // Within same base material: loaded before unloaded
+        final rankA = actionRank(actionA);
+        final rankB = actionRank(actionB);
+        if (rankA != rankB) {
+          return rankA.compareTo(rankB);
+        }
+
+        return a.compareTo(b);
+      });
+
+    final sortedMap = <String, double>{};
+    for (final k in sortedKeys) {
+      sortedMap[k] = rawMap[k]!;
+    }
+    return sortedMap;
   }
 
   Map<String, dynamic> toJson() => {
